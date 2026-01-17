@@ -1,0 +1,114 @@
+# Using peb (Pebbles Task Tracker)
+
+You are working with "peb" (Pebbles), an agent-first Go CLI tool for tracking
+tasks, bugs, features, and epics.
+
+## Core Concepts
+
+**Peb Structure:** A "peb" represents a task/bug/feature/epic with these fields:
+
+- `id`: Unique identifier (format: `{{.PebbleIDPattern}}` where `{{.PebbleIDSuffix}}` is a random ID)
+- `title`: Short description
+- `type`: One of: `bug`, `feature`, `epic`, `task`
+- `status`: One of: `new`, `in-progress`, `fixed`, `wont-fix`
+- `created`/`changed`: timestamps
+- `blocked-by`: List of peb IDs that block this peb (dependency tracking)
+- `content`: Markdown description
+
+Terminology:
+
+- Pebs with status `new` or `in-progress` are "open".
+- Pebs with status `fixed` or `wont-fix` are "closed".
+
+## Common Workflows
+
+### Create a new peb
+
+```bash
+echo '{"title":"Fix login bug","content":"Users cannot log in","type":"bug"}' | peb new
+```
+
+Required: `title`, `content` Optional: `type` (default: `bug`), `blocked-by`
+(array of peb IDs)
+
+### Create a dependent peb (blocked by another)
+
+```bash
+echo '{"title":"Fix UI","content":"...","blocked-by":["{{.PebbleIDPattern}}"]}' | peb new
+```
+
+### Read a peb
+
+```bash
+peb read {{.PebbleIDPattern}}
+```
+
+Returns full peb data as JSON.
+
+### Update a peb
+
+```bash
+peb update {{.PebbleIDPattern}} '{"status":"in-progress"}'
+peb update {{.PebbleIDPattern}} '{"title":"New title"}'
+peb update {{.PebbleIDPattern}} '{"blocked-by":["{{.PebbleIDPattern2}}","{{.PebbleIDPattern3}}"]}'
+```
+
+### Query pebs
+
+```bash
+# List all pebs
+peb query
+
+# Filter by status
+peb query status:new
+
+# Filter by type
+peb query type:feature
+
+# Find pebs blocked by a specific peb
+peb query blocked-by:{{.PebbleIDPattern}}
+
+# Combine filters (implicit AND)
+peb query status:new type:bug
+
+# Output specific fields only
+peb query --fields id,title
+```
+
+## Best Practices
+
+**Before starting work:**
+
+1. Use `peb query status:new` to find work
+2. Read the full peb with `peb read <id>` to understand requirements
+
+**While working:**
+
+1. Mark pebs as `in-progress` when starting work
+2. Update the peb's content if requirements change
+3. Mark as `fixed` when completed
+
+**Tracking dependencies:**
+
+- Use `blocked-by` when work depends on another peb
+- Use `peb read <id>` to find a peb's dependencies (must be completed before
+  this peb can be marked as fixed)
+- Query with `blocked-by:<id>` to find pebs blocked by a specific task
+
+## Example Workflow
+
+```bash
+# 1. Find a bug to work on
+peb query status:new type:bug
+
+# 2. Read details
+peb read {{.PebbleIDPattern}}
+
+# 3. Mark as in-progress
+peb update {{.PebbleIDPattern}} '{"status":"in-progress"}'
+
+# 4. Do the work...
+
+# 5. Mark as fixed
+peb update {{.PebbleIDPattern}} '{"status":"fixed"}'
+```
