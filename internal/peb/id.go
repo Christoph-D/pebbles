@@ -24,6 +24,15 @@ func GenerateID(prefix string, length int) (string, error) {
 
 func Filename(peb *Peb) string {
 	slug := slugifyTitle(peb.Title)
+	const maxFilenameLen = 100
+	prefixLen := len("peb-") + len(peb.ID) + len("--") + len(".md")
+	maxSlugLen := maxFilenameLen - prefixLen
+	if maxSlugLen < 0 {
+		maxSlugLen = 0
+	}
+	if len(slug) > maxSlugLen {
+		slug = slug[:maxSlugLen]
+	}
 	return fmt.Sprintf("peb-%s--%s.md", peb.ID, slug)
 }
 
