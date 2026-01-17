@@ -1,0 +1,3 @@
+# Pebbles configuration
+prefix = "peb"
+id_length = 4
