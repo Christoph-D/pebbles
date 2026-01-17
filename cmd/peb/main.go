@@ -17,6 +17,7 @@ func main() {
 			commands.NewCommand(),
 			commands.ReadCommand(),
 			commands.UpdateCommand(),
+			commands.QueryCommand(),
 		},
 	}
 

@@ -1,10 +1,10 @@
 ---
 # pebbles-6uma
 title: Pebbles CLI Tool
-status: todo
+status: completed
 type: epic
 created_at: 2026-01-17T19:43:36Z
-updated_at: 2026-01-17T19:43:36Z
+updated_at: 2026-01-17T23:05:00Z
 ---
 
 Implement a Go CLI tool called "pebbles" (binary: `peb`) for tracking tasks, bugs, features, and epics.
