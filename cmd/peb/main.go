@@ -16,6 +16,7 @@ func main() {
 			commands.InitCommand(),
 			commands.NewCommand(),
 			commands.ReadCommand(),
+			commands.UpdateCommand(),
 		},
 	}
 
