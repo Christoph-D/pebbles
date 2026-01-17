@@ -25,7 +25,7 @@ func GenerateID(prefix string, length int) (string, error) {
 func Filename(peb *Peb) string {
 	slug := slugifyTitle(peb.Title)
 	const maxFilenameLen = 100
-	prefixLen := len("peb-") + len(peb.ID) + len("--") + len(".md")
+	prefixLen := len(peb.ID) + len("--") + len(".md")
 	maxSlugLen := maxFilenameLen - prefixLen
 	if maxSlugLen < 0 {
 		maxSlugLen = 0
@@ -33,7 +33,7 @@ func Filename(peb *Peb) string {
 	if len(slug) > maxSlugLen {
 		slug = slug[:maxSlugLen]
 	}
-	return fmt.Sprintf("peb-%s--%s.md", peb.ID, slug)
+	return fmt.Sprintf("%s--%s.md", peb.ID, slug)
 }
 
 func slugifyTitle(title string) string {
@@ -63,15 +63,16 @@ func slugifyTitle(title string) string {
 	return slug
 }
 
-func ParseID(filename string) (string, error) {
+func ParseID(filename string, prefix string) (string, error) {
 	base := filepath.Base(filename)
 	base = strings.TrimSuffix(base, ".md")
-	if !strings.HasPrefix(base, "peb-") {
-		return "", errors.New("invalid peb filename format")
+	prefixWithDash := prefix + "-"
+	if !strings.HasPrefix(base, prefixWithDash) {
+		return "", fmt.Errorf("invalid peb filename format: expected prefix %s", prefixWithDash)
 	}
 	parts := strings.SplitN(base, "-", 3)
 	if len(parts) < 3 {
 		return "", errors.New("invalid peb filename format")
 	}
-	return fmt.Sprintf("peb-%s", parts[1]), nil
+	return fmt.Sprintf("%s-%s", prefix, parts[1]), nil
 }
