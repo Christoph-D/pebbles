@@ -42,6 +42,7 @@
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/pebbles,type=bind,consistency=cached",
     "remoteUser": "pebbles",
     "mounts": [
-        "source=config-pebbles,target=/home/pebbles/persistent-config,type=volume"
+        "source=config-pebbles,target=/home/pebbles/persistent-config,type=volume",
+        "source=/etc/localtime,target=/usr/share/zoneinfo/hostlocaltime,type=bind,readonly"
     ]
 }

@@ -1,12 +1,11 @@
 FROM alpine:3.23
 
-RUN apk add --no-cache bash curl gcompat git go less ripgrep
+RUN apk add --no-cache bash curl gcompat git go less ripgrep tzdata
+RUN ln -sf /usr/share/zoneinfo/hostlocaltime /etc/localtime
 
 ARG USERNAME=pebbles
 RUN addgroup --gid 1000 $USERNAME && adduser --uid 1000 --ingroup $USERNAME --disabled-password $USERNAME
 RUN mkdir -p /home/$USERNAME && chown $USERNAME:$USERNAME /home/$USERNAME
-
-#RUN curl -fsSL https://go.dev/dl/go1.25.5.linux-amd64.tar.gz | tar -xz -C /usr/local
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
