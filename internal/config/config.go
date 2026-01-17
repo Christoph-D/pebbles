@@ -70,3 +70,10 @@ func loadConfig(pebblesDir string) (*Config, error) {
 func (c *Config) PebblesDir() string {
 	return c.pebblesDir
 }
+
+func DefaultConfigContent() string {
+	return fmt.Sprintf(`# Pebbles configuration
+prefix = "%s"
+id_length = %d
+`, DefaultPrefix, DefaultIDLength)
+}

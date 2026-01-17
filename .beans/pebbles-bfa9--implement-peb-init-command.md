@@ -1,11 +1,11 @@
 ---
 # pebbles-bfa9
 title: Implement peb init command
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-01-17T19:44:04Z
-updated_at: 2026-01-17T19:44:50Z
+updated_at: 2026-01-17T22:25:04Z
 parent: pebbles-6uma
 blocking:
     - pebbles-m0dp
@@ -15,8 +15,8 @@ Implement the `peb init` command to initialize a new pebbles project.
 
 ## Checklist
 
-- [ ] Create `internal/commands/init.go`
-- [ ] Implement init command that:
+- [x] Create `internal/commands/init.go`
+- [x] Implement init command that:
   - Creates `.pebbles/` directory in current directory
   - Creates `.pebbles/config.toml` with default values:
     ```toml
@@ -25,7 +25,7 @@ Implement the `peb init` command to initialize a new pebbles project.
     id_length = 4
     ```
   - Outputs: `Initialized pebbles in .pebbles/`
-- [ ] Handle error case: `.pebbles/` already exists
+- [x] Handle error case: `.pebbles/` already exists
   - Output: `Error: .pebbles/ already exists in current directory.`
-- [ ] Register command in main.go
-- [ ] Write tests for init command
+- [x] Register command in main.go
+- [x] Write tests for init command

@@ -13,6 +13,7 @@ func main() {
 		Name:  "peb",
 		Usage: "Task tracking CLI tool",
 		Commands: []*cli.Command{
+			commands.InitCommand(),
 			commands.NewCommand(),
 		},
 	}
