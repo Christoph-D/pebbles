@@ -13,7 +13,8 @@
                 "esbenp.prettier-vscode",
                 "saoudrizwan.claude-dev",
                 "sst-dev.opencode",
-                "golang.go"
+                "golang.go",
+                "ms-vscode.makefile-tools"
             ],
             "settings": {
                 "[markdown]": {
