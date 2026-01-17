@@ -1,6 +1,6 @@
 # Pebbles - Task Tracking CLI Tool
 
-A Go CLI tool called "pebbles" (binary: `peb`) for tracking tasks, bugs, features, and epics.
+A an agent-first Go CLI tool called "pebbles" (binary: `peb`) for tracking tasks, bugs, features, and epics. It is designed to be used by AI agents.
 
 ## Configuration
 
@@ -108,183 +108,134 @@ Error: .pebbles/ already exists in current directory.
 
 ### `peb new`
 
-Create a new peb.
+Create a new peb. Reads JSON from stdin.
 
 ```
-peb new <title> <content> [--type <type>] [--blocked-by <peb-id,...>]
+peb new
 ```
+
+Required fields: `title`, `content`.
+
+Optional fields: `type` (default: `bug`), `blocked-by` (array of peb IDs, or empty array [] to clear).
 
 **Examples:**
 ```
-$ peb new "Dependency" "Must be done first" --blocked-by peb-abc1
-Created new pebble peb-mn34 in .pebbles/peb-mn34--dependency.md
+$ peb new <<'EOF'
+{"title":"Dependent","content":"Must be done after peb-abc1","blocked-by":["peb-abc1"]}
+EOF
+Created new pebble peb-mn34 in .pebbles/peb-mn34--dependent.md
 
-$ peb new "Some title" "..." --blocked-by peb-nonexistent
-Error: Blocked-by pebble(s) not found: peb-nonexistent
+$ peb new <<'EOF'
+{"title":"Some title","content":"...","blocked-by":"peb-nonexistent"}
+EOF
+Error: Referenced pebble(s) not found: peb-nonexistent
 ```
 
 ### `peb read`
 
-Display a peb's full content.
+Display a peb's full content as JSON.
 
 ```
-peb <peb-id> read
-```
-
-**Example:**
-```
-$ peb peb-f3zh read
----
-id: peb-f3zh
-title: Fix the login system
-type: bug
-status: new
-created: 2026-01-01T12:00:00-08:00
-changed: 2026-01-01T12:00:00-08:00
-blocked-by:
-  - peb-qwer
----
-Users can't log in if their name is "null".
-```
-
-### `peb set-status`
-
-Update a peb's status.
-
-```
-peb <peb-id> set-status <new|in-progress|fixed|wont-fix>
+peb read <peb-id>
 ```
 
 **Example:**
 ```
-$ peb peb-f3zh set-status in-progress
-Marked pebble peb-f3zh "Fix the login system" as in-progress.
+$ peb read peb-f3zh
+{
+  "id": "peb-f3zh",
+  "title": "Fix the login system",
+  "type": "bug",
+  "status": "new",
+  "created": "2026-01-01T12:00:00-08:00",
+  "changed": "2026-01-01T12:00:00-08:00",
+  "blocked-by": ["peb-qwer"],
+  "content": "Users can't log in if their name is \"null\"."
+}
 ```
 
-### `peb set-title`
+### `peb update`
 
-Update a peb's title. This renames the file.
-
-```
-peb <peb-id> set-title <title>
-```
-
-**Example:**
-```
-$ peb peb-f3zh set-title "Fix the authentication system"
-Updated title of peb-f3zh to "Fix the authentication system".
-```
-
-### `peb set-content`
-
-Update a peb's content.
+Update a peb's fields. Takes a JSON object containing the fields to update (as argument or from stdin). Omitted fields remain unchanged.
 
 ```
-peb <peb-id> set-content <content>
+peb update <peb-id> '{"title":"...","content":"...","type":"bug","status":"in-progress","blocked-by":["peb-id",...]}'
+peb update <peb-id> < update.json
 ```
 
-**Example:**
-```
-$ peb peb-f3zh set-content "Updated description of the issue."
-Updated content of peb-f3zh "Fix the login system".
-```
+Optional fields: `title`, `content`, `type`, `status`, `blocked-by`.
 
-### `peb set-type`
-
-Update a peb's type.
-
+**Examples:**
 ```
-peb <peb-id> set-type <bug|feature|epic|task>
-```
+$ peb update peb-f3zh '{"status":"in-progress"}'
+Updated status of peb-f3zh.
 
-**Example:**
-```
-$ peb peb-f3zh set-type feature
-Updated type of peb-f3zh "Fix the login system" to feature.
-```
+$ peb update peb-f3zh '{"title":"Fix the authentication system"}'
+Updated title of peb-f3zh.
 
-### `peb set-blocking`
+$ peb update peb-f3zh <<'EOF'
+{"content":"Updated description with \"quotes\" and $special chars."}
+EOF
+Updated content of peb-f3zh.
 
-Update a peb's blocking list. Updates the "blocked-by" side of the relationship. Use empty string to clear.
+$ peb update peb-f3zh '{"type":"feature"}'
+Updated type of peb-f3zh.
 
-```
-peb <peb-id> set-blocking <peb-id,...|"">
+$ peb update peb-f3zh '{"blocked-by":["peb-5n20","peb-drg8"]}'
+Updated blocked-by list of peb-f3zh.
+
+$ peb update peb-f3zh '{"blocked-by":[]}'
+Cleared blocked-by list of peb-f3zh.
 ```
 
-**Example:**
-```
-$ peb peb-f3zh set-blocking peb-5n20,peb-drg8
-Updated blocking list of peb-f3zh "Fix the login system".
-
-$ peb peb-f3zh set-blocking ""
-Cleared blocking list of peb-f3zh "Fix the login system".
-```
-
-**Behavior:**
-1. Adds target to each blocked peb's `blocked-by` list
-2. Removes target from any previously blocked peb's `blocked-by` list
-
-### `peb set-blocked-by`
-
-Update a peb's blocked-by list. Updates both sides of the relationship. Use empty string to clear.
-
-```
-peb <peb-id> set-blocked-by <peb-id,...|"">
-```
-
-**Example:**
-```
-$ peb peb-f3zh set-blocked-by peb-qwer,peb-asdf
-Updated blocked-by list of peb-f3zh "Fix the login system".
-
-$ peb peb-f3zh set-blocked-by ""
-Cleared blocked-by list of peb-f3zh "Fix the login system".
-```
-
-**Behavior:**
-1. Sets target peb's `blocked-by` field
-2. Validates that all referenced peb IDs exist
-3. Validates no cycles in the dependency graph
+**Behavior for blocked-by field:**
+1. Validates that all referenced peb IDs exist
+2. Validates no cycles in the dependency graph
+3. Sets the target peb's blocked-by list to the given peb IDs
 
 ### `peb query`
 
-Search and list pebs. No arguments lists all pebs. Multiple filters use implicit AND.
+Search and list pebs. Returns JSONL (JSON Lines) - one JSON object per line. No arguments lists all pebs. Multiple filters use implicit AND.
+
+**Default fields:** id, type, status, title
 
 ```
-peb query [filters...]
+peb query [--fields <field,...>] [filters...]
 ```
 
 **Filters:**
 - `status:<new|in-progress|fixed|wont-fix>` - Filter by status
 - `type:<bug|feature|epic|task>` - Filter by type
-- `blocked-by:<peb-id>` - Pebs that are blocked by the given peb
-- `blocking:<peb-id>` - Pebs that block the given peb
+- `blocked-by:<peb-id>` - Pebs that have this peb in their blocked-by list
 
 **Examples:**
 ```
 $ peb query
-peb-f3zh (bug,new) Fix the login system
-peb-abc1 (bug,new) Some bug
-peb-drg8 (bug,in-progress) Some other bug
-peb-jwyp (feature,new) Some feature
+{"id":"peb-f3zh","type":"bug","status":"new","title":"Fix the login system"}
+{"id":"peb-abc1","type":"bug","status":"new","title":"Some bug"}
+{"id":"peb-drg8","type":"bug","status":"in-progress","title":"Some other bug"}
+{"id":"peb-jwyp","type":"feature","status":"new","title":"Some feature"}
+
+$ peb query --fields id
+{"id":"peb-f3zh"}
+{"id":"peb-abc1"}
+{"id":"peb-drg8"}
+{"id":"peb-jwyp"}
 
 $ peb query status:new
-peb-f3zh (bug,new) Fix the login system
-peb-abc1 (bug,new) Some bug
-peb-jwyp (feature,new) Some feature
+{"id":"peb-f3zh","type":"bug","status":"new","title":"Fix the login system"}
+{"id":"peb-abc1","type":"bug","status":"new","title":"Some bug"}
+{"id":"peb-jwyp","type":"feature","status":"new","title":"Some feature"}
 
 $ peb query status:new type:feature
-peb-jwyp (feature,new) Some feature
+{"id":"peb-jwyp","type":"feature","status":"new","title":"Some feature"}
 
 $ peb query blocked-by:peb-f3zh
-peb-5n20 (bug,new) Some bug
-peb-drg8 (bug,in-progress) Some other bug
+{"id":"peb-5n20","type":"bug","status":"new","title":"Some bug"}
+{"id":"peb-drg8","type":"bug","status":"in-progress","title":"Some other bug"}
 
 $ peb query blocked-by:peb-f3zh status:new
-peb-5n20 (bug,new) Some bug
-
-$ peb query blocking:peb-f3zh
-No pebbles found.
+{"id":"peb-5n20","type":"bug","status":"new","title":"Some bug"}
 ```
 
 ## Project Structure
@@ -308,7 +259,7 @@ pebbles/
 │       ├── init.go              # peb init
 │       ├── new.go               # peb new
 │       ├── read.go              # peb read
-│       ├── setters.go           # peb set-* commands
+│       ├── update.go            # peb update
 │       └── query.go             # peb query
 ├── go.mod
 └── go.sum
@@ -332,7 +283,7 @@ pebbles/
 
 1. Core infrastructure - config loading, Peb struct, file I/O
 2. `peb init` - initialize new project
-3. `peb new` - create pebs with all flags
+3. `peb new` - create pebs from JSON
 4. `peb read` - display peb content
-5. `peb set-*` commands - all setters with bidirectional sync
+5. `peb update` - update pebs from JSON with bidirectional sync
 6. `peb query` - filtering and listing

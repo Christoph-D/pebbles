@@ -11,12 +11,12 @@ blocking:
     - pebbles-m0yt
 ---
 
-Implement the `peb read` command to display peb content.
+Implement the `peb read` command to display peb content as JSON.
 
 ## Command Syntax
 
 ```
-peb <peb-id> read
+peb read <peb-id>
 ```
 
 ## Checklist
@@ -25,7 +25,7 @@ peb <peb-id> read
 - [ ] Implement read command that:
   - Takes peb ID as argument
   - Loads the peb file
-  - Outputs full markdown content with YAML frontmatter
+  - Outputs full peb data as JSON (including all fields: id, title, type, status, created, changed, blocked-by, content)
 - [ ] Handle error case: peb not found
 - [ ] Register command in main.go
 - [ ] Write tests for read command
