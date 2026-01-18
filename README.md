@@ -178,10 +178,11 @@ Create a new task from JSON via stdin
 echo '{"title":"Fix bug","content":"Description...","type":"bug"}' | peb new
 ```
 
-### `peb read <id>`
-Display full task details as JSON
+### `peb read <id> [<id> ...]`
+Display full task details as JSON (accepts one or more IDs)
 ```bash
 peb read peb-ab12
+peb read peb-ab12 peb-cd34 peb-ef56
 ```
 
 ### `peb update <id> <json>`
