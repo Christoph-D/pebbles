@@ -29,7 +29,7 @@ id_length = 4
 		t.Fatal(err)
 	}
 
-	s := store.New(pebblesDir)
+	s := store.New(pebblesDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}

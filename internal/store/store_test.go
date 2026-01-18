@@ -10,7 +10,7 @@ import (
 
 func TestDelete(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestDelete(t *testing.T) {
 
 func TestDeleteNonExistentFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestDeleteNonExistentFile(t *testing.T) {
 
 func TestDeleteMultiple(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestDeleteMultiple(t *testing.T) {
 
 func TestDeleteAndReload(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestDeleteAndReload(t *testing.T) {
 		t.Fatalf("Delete() failed: %v", err)
 	}
 
-	sReload := New(tmpDir)
+	sReload := New(tmpDir, "peb")
 	if err := sReload.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatalf("Load() failed: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestLoad(t *testing.T) {
 
 func TestLoadEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatalf("Load() failed on empty directory: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestLoadNonExistentDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	nonExistentDir := filepath.Join(tmpDir, "does-not-exist")
 
-	s := New(nonExistentDir)
+	s := New(nonExistentDir, "peb")
 	if err := s.Load(); err == nil {
 		t.Error("expected error when loading non-existent directory")
 	}
@@ -205,7 +205,7 @@ func TestLoadIgnoresNonMarkdownFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatalf("Load() failed: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestLoadIgnoresNonMarkdownFiles(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestGet(t *testing.T) {
 
 func TestGetNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func TestGetNotFound(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ func TestSave(t *testing.T) {
 
 func TestSaveUpdate(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestSaveUpdate(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +349,7 @@ func TestAll(t *testing.T) {
 
 func TestExists(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -374,7 +374,7 @@ func TestExists(t *testing.T) {
 
 func TestGenerateUniqueID(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ func TestGenerateUniqueID(t *testing.T) {
 
 func TestGenerateUniqueIDCollisionHandling(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +423,7 @@ func TestGenerateUniqueIDCollisionHandling(t *testing.T) {
 
 func TestGenerateUniqueIDFailure(t *testing.T) {
 	tmpDir := t.TempDir()
-	s := New(tmpDir)
+	s := New(tmpDir, "peb")
 	if err := s.Load(); err != nil {
 		t.Fatal(err)
 	}

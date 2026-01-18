@@ -33,7 +33,7 @@ Example:
 				return err
 			}
 
-			s := store.New(cfg.PebblesDir())
+			s := store.New(cfg.PebblesDir(), cfg.Prefix)
 			if err := s.Load(); err != nil {
 				return err
 			}

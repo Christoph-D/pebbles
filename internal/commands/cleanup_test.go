@@ -93,7 +93,7 @@ func TestCleanupCommand(t *testing.T) {
 		t.Errorf("expected output to contain 'Deleted 2', got: %s", lines[0])
 	}
 
-	sReload := store.New(pebblesDir)
+	sReload := store.New(pebblesDir, "peb")
 	if err := sReload.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestCleanupCommandNoClosedPebs(t *testing.T) {
 		t.Errorf("expected output to contain 'No closed pebs', got: %s", lines[0])
 	}
 
-	sReload := store.New(pebblesDir)
+	sReload := store.New(pebblesDir, "peb")
 	if err := sReload.Load(); err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestCleanupCommandAllClosed(t *testing.T) {
 		t.Errorf("expected output to contain 'Deleted 2', got: %s", lines[0])
 	}
 
-	sReload := store.New(pebblesDir)
+	sReload := store.New(pebblesDir, "peb")
 	if err := sReload.Load(); err != nil {
 		t.Fatal(err)
 	}

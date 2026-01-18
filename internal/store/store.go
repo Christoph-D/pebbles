@@ -10,18 +10,23 @@ import (
 )
 
 type Store struct {
-	pebs map[string]*peb.Peb
-	dir  string
+	cache     map[string]*peb.Peb
+	filenames map[string]string
+	dir       string
+	prefix    string
 }
 
-func New(dir string) *Store {
+func New(dir string, prefix string) *Store {
 	return &Store{
-		pebs: make(map[string]*peb.Peb),
-		dir:  dir,
+		cache:     make(map[string]*peb.Peb),
+		filenames: make(map[string]string),
+		dir:       dir,
+		prefix:    prefix,
 	}
 }
 
 func (s *Store) Load() error {
+	s.cache = make(map[string]*peb.Peb)
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
 		return fmt.Errorf("failed to read pebbles directory: %w", err)
@@ -37,41 +42,57 @@ func (s *Store) Load() error {
 			continue
 		}
 
-		path := filepath.Join(s.dir, name)
-		p, err := peb.ReadFile(path)
+		id, err := peb.ParseID(name, s.prefix)
 		if err != nil {
-			return fmt.Errorf("failed to read %s: %w", name, err)
+			continue
 		}
-
-		s.pebs[p.ID] = p
+		s.filenames[id] = name
 	}
 
 	return nil
 }
 
 func (s *Store) Get(id string) (*peb.Peb, bool) {
-	p, ok := s.pebs[id]
-	return p, ok
+	if p, ok := s.cache[id]; ok {
+		return p, true
+	}
+
+	filename, ok := s.filenames[id]
+	if !ok {
+		return nil, false
+	}
+
+	path := filepath.Join(s.dir, filename)
+	p, err := peb.ReadFile(path)
+	if err != nil {
+		return nil, false
+	}
+
+	s.cache[id] = p
+	return p, true
 }
 
 func (s *Store) Save(p *peb.Peb) error {
 	if err := peb.WriteFile(s.dir, p); err != nil {
 		return fmt.Errorf("failed to save peb: %w", err)
 	}
-	s.pebs[p.ID] = p
+	s.cache[p.ID] = p
+	s.filenames[p.ID] = peb.Filename(p)
 	return nil
 }
 
 func (s *Store) All() []*peb.Peb {
-	result := make([]*peb.Peb, 0, len(s.pebs))
-	for _, p := range s.pebs {
-		result = append(result, p)
+	result := make([]*peb.Peb, 0, len(s.filenames))
+	for id := range s.filenames {
+		if p, ok := s.Get(id); ok {
+			result = append(result, p)
+		}
 	}
 	return result
 }
 
 func (s *Store) Exists(id string) bool {
-	_, ok := s.pebs[id]
+	_, ok := s.filenames[id]
 	return ok
 }
 
@@ -81,7 +102,8 @@ func (s *Store) Delete(p *peb.Peb) error {
 	if err := os.Remove(path); err != nil {
 		return fmt.Errorf("failed to delete peb file: %w", err)
 	}
-	delete(s.pebs, p.ID)
+	delete(s.cache, p.ID)
+	delete(s.filenames, p.ID)
 	return nil
 }
 
