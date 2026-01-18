@@ -17,8 +17,8 @@ tasks, bugs, features, and epics.
 
 Terminology:
 
-- Pebs with status `new` or `in-progress` are "open".
-- Pebs with status `fixed` or `wont-fix` are "closed".
+- Pebs with status `new` or `in-progress` are "open". Query with `peb query status:open`.
+- Pebs with status `fixed` or `wont-fix` are "closed". Query with `peb query status:closed`.
 
 ## Common Workflows
 
