@@ -1,17 +1,14 @@
-.PHONY: build run test clean install fmt vet help
+.PHONY: build test clean install fmt vet help
 
 BINARY_NAME=peb
 BUILD_DIR=bin
 CMD_DIR=cmd/peb
 
+# Default target
 build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
-
-run: build
-	@echo "Running $(BINARY_NAME)..."
-	./$(BUILD_DIR)/$(BINARY_NAME)
 
 test:
 	@echo "Running tests..."
@@ -50,7 +47,6 @@ deps:
 help:
 	@echo "Available targets:"
 	@echo "  build          - Build the binary"
-	@echo "  run            - Build and run the binary"
 	@echo "  test           - Run tests"
 	@echo "  test-coverage  - Run tests with coverage report"
 	@echo "  clean          - Remove build artifacts"

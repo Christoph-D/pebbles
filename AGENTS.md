@@ -4,8 +4,7 @@
 
 The project uses a Makefile for common development tasks:
 
-- `make build` - Build the binary to `bin/peb`
-- `make run` - Build and run the binary
+- `make` - Build the binary to `bin/peb` (default target)
 - `make test` - Run all tests with verbose output
 - `make test-coverage` - Run tests with coverage report (generates
   coverage.html)
@@ -16,6 +15,19 @@ The project uses a Makefile for common development tasks:
 - `make mod-tidy` - Tidy go.mod dependencies
 - `make deps` - Download dependencies
 - `make help` - Show all available targets
+
+## Running the Binary
+
+After building with `make`, the binary is available at `bin/peb`:
+
+```bash
+# Run directly
+./bin/peb <command>
+
+# Or install to PATH for easier access
+make install
+# Now you can use: peb <command>
+```
 
 ## Module Structure
 
