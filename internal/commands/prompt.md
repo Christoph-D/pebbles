@@ -75,6 +75,19 @@ peb query status:new type:bug
 peb query --fields id,title
 ```
 
+## Agent Requirements
+
+**MANDATORY:** You MUST use peb for tracking all tasks, bugs, and features.
+
+**Rules:**
+
+1. Every task, bug, or feature must be tracked as a peb
+2. Create a peb before starting any work
+3. Update peb status throughout the lifecycle
+4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
+5. Use `blocked-by` to establish clear dependencies between related work
+6. For complex work, create an `epic` peb that blocks smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
+
 ## Best Practices
 
 **Before starting work:**
