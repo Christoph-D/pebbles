@@ -101,6 +101,20 @@ peb query status:new type:bug
 peb query --fields id,title
 ```
 
+### Cleanup pebs
+
+```bash
+peb cleanup
+```
+
+**⚠️ CRITICAL WARNING: THIS COMMAND DELETES DATA**
+
+**DO NOT run `peb cleanup` unless the user explicitly asks for it.** This command permanently deletes pebs and their data cannot be recovered.
+
+This command removes all closed pebs.
+
+Always confirm with the user before running this command.
+
 ## Best Practices
 
 **Before starting work:**
