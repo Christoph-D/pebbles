@@ -23,14 +23,14 @@ const (
 )
 
 type Peb struct {
-	ID        string   `yaml:"id"`
-	Title     string   `yaml:"title"`
-	Type      Type     `yaml:"type"`
-	Status    Status   `yaml:"status"`
-	Created   string   `yaml:"created"`
-	Changed   string   `yaml:"changed"`
-	BlockedBy []string `yaml:"blocked-by,omitempty"`
-	Content   string   `yaml:"-"`
+	ID        string   `yaml:"id" json:"id"`
+	Title     string   `yaml:"title" json:"title"`
+	Type      Type     `yaml:"type" json:"type"`
+	Status    Status   `yaml:"status" json:"status"`
+	Created   string   `yaml:"created" json:"created"`
+	Changed   string   `yaml:"changed" json:"changed"`
+	BlockedBy []string `yaml:"blocked-by,omitempty" json:"blocked-by,omitempty"`
+	Content   string   `yaml:"-" json:"content"`
 }
 
 func New(id, title string, pebType Type, status Status, content string) *Peb {
