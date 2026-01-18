@@ -159,6 +159,10 @@ Check what's pending:
 # Show all open (new or in-progress) tasks
 peb query status:open
 
+# Show specific pebs by ID
+peb query id:peb-ab12
+peb query id:(peb-ab12|peb-cd34)
+
 # Show what's blocked by a specific task
 peb query blocked-by:peb-ab12
 ```
@@ -196,6 +200,8 @@ peb update peb-ab12 '{"title":"New title"}'
 Search and list tasks
 ```bash
 peb query                              # List all
+peb query id:peb-ab12                  # Show specific peb
+peb query id:(peb-ab12|peb-cd34)       # Show multiple pebs
 peb query status:new                   # New tasks only
 peb query type:bug                     # Bugs only
 peb query status:new type:bug          # New bugs only

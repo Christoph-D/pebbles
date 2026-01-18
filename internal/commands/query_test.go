@@ -131,6 +131,41 @@ func TestQueryCommand(t *testing.T) {
 			args:    []string{"type:(bug|feature)", "status:open"},
 			wantIDs: []string{id2},
 		},
+		{
+			name:    "filter by single ID",
+			args:    []string{"id:" + id1},
+			wantIDs: []string{id1},
+		},
+		{
+			name:    "filter by ID OR",
+			args:    []string{"id:(" + id1 + "|" + id2 + ")"},
+			wantIDs: []string{id1, id2},
+		},
+		{
+			name:    "filter by ID single value in parentheses",
+			args:    []string{"id:(" + id1 + ")"},
+			wantIDs: []string{id1},
+		},
+		{
+			name:    "filter by ID OR with spaces",
+			args:    []string{"id:( " + id1 + " | " + id2 + " )"},
+			wantIDs: []string{id1, id2},
+		},
+		{
+			name:    "filter by ID with status",
+			args:    []string{"id:(" + id1 + "|" + id2 + ")", "status:new"},
+			wantIDs: []string{id1},
+		},
+		{
+			name:    "filter by non-existent ID",
+			args:    []string{"id:peb-xxxx"},
+			wantIDs: []string{},
+		},
+		{
+			name:    "filter by ID with type",
+			args:    []string{"id:(" + id2 + "|" + id4 + ")", "type:bug"},
+			wantIDs: []string{id2},
+		},
 	}
 
 	for _, tt := range tests {

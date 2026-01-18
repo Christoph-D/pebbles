@@ -21,6 +21,10 @@ func QueryCommand() *cli.Command {
 		Usage: "Search and list pebs",
 		Description: `Query pebs using filters. Multiple filters are combined with AND logic.
 
+ID filters:
+  id:peb-xxxx          Show peb with specific ID
+  id:(peb-xxxx|peb-yyyy)  Show pebs with any of the listed IDs
+
 Status filters:
   status:new           Show new pebs
   status:in-progress   Show in-progress pebs
@@ -36,14 +40,17 @@ Type filters:
   type:task            Show tasks
 
 OR syntax:
-  type:(bug|feature)   Show bugs or features
-  status:(new|fixed)   Show new or fixed pebs
+  id:(peb-xxxx|peb-yyyy)    Show pebs with any of the listed IDs
+  type:(bug|feature)        Show bugs or features
+  status:(new|fixed)        Show new or fixed pebs
 
 Other filters:
   blocked-by:peb-xxxx  Show pebs blocked by a specific peb ID
 
 Examples:
   peb query                          List all pebs
+  peb query id:peb-xxxx              Show peb-xxxx
+  peb query id:(peb-xxxx|peb-yyyy)   Show peb-xxxx or peb-yyyy
   peb query status:new               Show all new pebs
   peb query type:bug                 Show all bugs
   peb query status:new type:feature  Show new features only
@@ -161,6 +168,21 @@ func parseFilters(args []string) ([]filterFunc, error) {
 			} else {
 				filters = append(filters, func(p *peb.Peb) bool {
 					return string(p.Type) == value
+				})
+			}
+		case "id":
+			if values := parseOrValues(value); len(values) > 0 {
+				filters = append(filters, func(p *peb.Peb) bool {
+					for _, v := range values {
+						if p.ID == v {
+							return true
+						}
+					}
+					return false
+				})
+			} else {
+				filters = append(filters, func(p *peb.Peb) bool {
+					return p.ID == value
 				})
 			}
 		case "blocked-by":

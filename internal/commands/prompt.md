@@ -79,6 +79,12 @@ peb update {{.PebbleIDPattern}} '{"blocked-by":["{{.PebbleIDPattern2}}","{{.Pebb
 # List all pebs
 peb query
 
+# Filter by ID (single)
+peb query id:{{.PebbleIDPattern}}
+
+# Filter by ID (multiple - OR logic)
+peb query id:({{.PebbleIDPattern}}|{{.PebbleIDPattern2}})
+
 # Filter by status
 peb query status:new
 

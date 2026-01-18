@@ -90,7 +90,7 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
         },
       }),
       peb_query: tool({
-        description: "Query pebs with optional filters (status:new|in-progress|fixed|wont-fix|open|closed, type:bug|feature|epic|task, blocked-by:peb-id, --fields:id,title). Returns list of pebs.",
+        description: "Query pebs with optional filters (id:peb-xxxx|id:(peb-xxxx|peb-yyyy), status:new|in-progress|fixed|wont-fix|open|closed, type:bug|feature|epic|task, blocked-by:peb-id, --fields:id,title). Returns list of pebs.",
         args: {
           filters: tool.schema.array(tool.schema.string()).optional().describe("Array of filters (e.g., ['status:new', 'type:bug'])"),
           fields: tool.schema.array(tool.schema.string()).optional().describe("Array of fields to output (e.g., ['id', 'title'])"),
