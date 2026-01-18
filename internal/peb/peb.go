@@ -40,14 +40,13 @@ func New(id, title string, pebType Type, status Status, content string) *Peb {
 	now := time.Now()
 	timestamp := now.Local().Format(timestampFormat)
 	return &Peb{
-		ID:        id,
-		Title:     title,
-		Type:      pebType,
-		Status:    status,
-		Created:   timestamp,
-		Changed:   timestamp,
-		BlockedBy: []string{},
-		Content:   content,
+		ID:      id,
+		Title:   title,
+		Type:    pebType,
+		Status:  status,
+		Created: timestamp,
+		Changed: timestamp,
+		Content: content,
 	}
 }
 
