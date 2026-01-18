@@ -14,7 +14,6 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/home/$USERNA
   && echo "$SNIPPET" >> "/home/$USERNAME/.bashrc"
 
 ENV PATH="$PATH:/usr/local/go/bin:/home/$USERNAME/go/bin/"
-RUN go install github.com/hmans/beans@latest
 
 ENV USE_BUILTIN_RIPGREP=0
 ENV CLAUDE_CONFIG_DIR=/home/$USERNAME/persistent-config
