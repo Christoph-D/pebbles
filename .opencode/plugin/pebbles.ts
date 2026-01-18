@@ -3,12 +3,12 @@ import { tool } from "@opencode-ai/plugin";
 import { spawn } from "bun";
 
 /**
- * Pebbles prime plugin for opencode
+ * Pebbles plugin for opencode
  *
  * Put this file into one of these locations:
  *
- * - Project local: .opencode/plugin/pebbles-prime.ts
- * - User global: ~/.opencode/plugin/pebbles-prime.ts
+ * - Project local: .opencode/plugin/pebbles.ts
+ * - User global: ~/.opencode/plugin/pebbles.ts
  */
 
 export const PebblesPrimePlugin: Plugin = async ({ $ }) => {
