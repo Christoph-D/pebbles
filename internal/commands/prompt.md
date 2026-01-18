@@ -8,7 +8,7 @@ tasks, bugs, features, and epics.
 **ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
 
 Before doing ANY non-trivial task, bug fix, feature, or code change:
-1. Create a peb to track it
+1. Create a peb to track it (for complex work, create an epic with subtasks)
 2. Update its status as you work
 3. Mark it as fixed when complete
 
