@@ -18,6 +18,32 @@ func QueryCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "query",
 		Usage: "Search and list pebs",
+		Description: `Query pebs using filters. Multiple filters are combined with AND logic.
+
+Status filters:
+  status:new           Show new pebs
+  status:in-progress   Show in-progress pebs
+  status:fixed         Show fixed pebs
+  status:wont-fix      Show pebs marked as wont-fix
+  status:open          Show all open pebs (new or in-progress)
+  status:closed        Show all closed pebs (fixed or wont-fix)
+
+Type filters:
+  type:bug             Show bugs
+  type:feature         Show features
+  type:epic            Show epics
+  type:task            Show tasks
+
+Other filters:
+  blocked-by:peb-xxxx  Show pebs blocked by a specific peb ID
+
+Examples:
+  peb query                          List all pebs
+  peb query status:new               Show all new pebs
+  peb query type:bug                 Show all bugs
+  peb query status:new type:feature  Show new features only
+  peb query blocked-by:peb-xxxx      Show pebs blocked by peb-xxxx
+  peb query --fields id,title        Show only id and title fields`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "fields",

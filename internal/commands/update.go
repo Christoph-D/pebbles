@@ -34,6 +34,29 @@ func UpdateCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "update",
 		Usage: "Update peb fields",
+		Description: `Update an existing peb. Takes a peb ID as argument and JSON input via stdin or as a CLI argument.
+
+All fields are optional. Only provided fields will be updated.
+
+Available fields:
+  title      Short description (use stdin to avoid quoting issues)
+  content    Markdown description (use stdin to avoid quoting issues)
+  type       One of: bug, feature, epic, task
+  status     One of: new, in-progress, fixed, wont-fix
+  blocked-by Array of peb IDs this peb depends on
+
+Examples:
+  peb update peb-xxxx '{"status":"in-progress"}'
+  peb update peb-xxxx '{"type":"feature"}'
+  peb update peb-xxxx '{"blocked-by":["peb-yyyy","peb-zzzz"]}'
+  
+  peb update peb-xxxx <<'EOF'
+  {"title":"New title"}
+  EOF
+  
+  peb update peb-xxxx <<'EOF'
+  {"content":"Detailed description\n\nWith multiple paragraphs"}
+  EOF`,
 		Action: func(c *cli.Context) error {
 			if c.NArg() < 1 {
 				return fmt.Errorf("peb ID is required")

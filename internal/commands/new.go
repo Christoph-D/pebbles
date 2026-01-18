@@ -22,6 +22,28 @@ func NewCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "new",
 		Usage: "Create a new peb",
+		Description: `Create a new peb from JSON input via stdin.
+
+Required fields:
+  title     Short description of the peb
+  content   Markdown description
+
+Optional fields:
+  type      One of: bug, feature, epic, task (default: bug)
+  blocked-by Array of peb IDs this peb depends on
+
+Examples:
+  peb new <<'EOF'
+  {"title":"Fix login bug","content":"Users cannot log in"}
+  EOF
+  
+  peb new <<'EOF'
+  {"title":"Add feature","content":"Details...","type":"feature"}
+  EOF
+  
+  peb new <<'EOF'
+  {"title":"Dependent task","content":"...","blocked-by":["peb-xxxx"]}
+  EOF`,
 		Action: func(c *cli.Context) error {
 			cfg, err := config.Load()
 			if err != nil {

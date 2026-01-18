@@ -14,6 +14,13 @@ func ReadCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "read",
 		Usage: "Display peb content as JSON",
+		Description: `Display the full details of a peb as formatted JSON.
+
+This command shows all peb fields including id, title, type, status,
+created/changed timestamps, blocked-by list, and markdown content.
+
+Example:
+  peb read peb-xxxx`,
 		Action: func(c *cli.Context) error {
 			if c.NArg() < 1 {
 				return fmt.Errorf("peb ID is required")

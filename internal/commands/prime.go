@@ -16,7 +16,7 @@ var promptTemplate string
 func PrimeCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "prime",
-		Usage: "Print the content of prompt.md",
+		Usage: "Primes the coding agent",
 		Action: func(c *cli.Context) error {
 			cfg, err := config.Load()
 			if err != nil {
