@@ -1,5 +1,8 @@
 # Pebbles - Task Tracker for Coding Agents
 
+[![CI](https://github.com/Christoph-D/pebbles/actions/workflows/test.yml/badge.svg)](https://github.com/Christoph-D/pebbles/actions/workflows/test.yml)
+
+
 **Pebbles** (`peb`) is a lightweight agent-first command-line task tracking tool optimized for [opencode](https://opencode.ai) but compatible with any coding agent that can execute shell commands. It helps AI agents track tasks, bugs, features, and epics as they work on your codebase.
 
 ## Why Pebbles?
