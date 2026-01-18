@@ -21,6 +21,15 @@ type UpdateInput struct {
 	BlockedBy *[]string `json:"blocked-by,omitempty"`
 }
 
+const maxOutputLength = 100
+
+func truncate(s string) string {
+	if len(s) > maxOutputLength {
+		return s[:maxOutputLength] + "..."
+	}
+	return s
+}
+
 func UpdateCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "update",
@@ -119,20 +128,20 @@ func UpdateCommand() *cli.Command {
 			}
 
 			if input.Status != nil && oldStatus != p.Status {
-				fmt.Printf("Updated status of %s.\n", pebID)
+				fmt.Printf("Updated status of %s to %s.\n", pebID, p.Status)
 			}
 			if input.Title != nil && oldTitle != p.Title {
-				fmt.Printf("Updated title of %s.\n", pebID)
+				fmt.Printf("Updated title of %s to %q.\n", pebID, truncate(p.Title))
 			}
 			if input.Content != nil && p.Content != "" {
-				fmt.Printf("Updated content of %s.\n", pebID)
+				fmt.Printf("Updated content of %s to %q.\n", pebID, truncate(p.Content))
 			}
 			if input.Type != nil && oldType != p.Type {
-				fmt.Printf("Updated type of %s.\n", pebID)
+				fmt.Printf("Updated type of %s to %s.\n", pebID, p.Type)
 			}
 			if input.BlockedBy != nil {
 				if len(*input.BlockedBy) > 0 {
-					fmt.Printf("Updated blocked-by list of %s.\n", pebID)
+					fmt.Printf("Updated blocked-by list of %s to %v.\n", pebID, p.BlockedBy)
 				} else {
 					fmt.Printf("Cleared blocked-by list of %s.\n", pebID)
 				}

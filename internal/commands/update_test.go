@@ -81,7 +81,7 @@ func TestUpdateCommandStatus(t *testing.T) {
 		t.Errorf("expected status in-progress, got %s", updatedPeb.Status)
 	}
 
-	if !strings.Contains(output, "Updated status of "+id+".") {
+	if !strings.Contains(output, "Updated status of "+id+" to in-progress.") {
 		t.Errorf("expected output to contain status update message, got: %s", output)
 	}
 }
@@ -144,7 +144,7 @@ func TestUpdateCommandTitle(t *testing.T) {
 		t.Errorf("new file not found after rename: %s", newPath)
 	}
 
-	if !strings.Contains(output, "Updated title of "+id+".") {
+	if !strings.Contains(output, "Updated title of "+id+" to \""+newTitle+"\".") {
 		t.Errorf("expected output to contain title update message, got: %s", output)
 	}
 }
@@ -190,7 +190,7 @@ func TestUpdateCommandContent(t *testing.T) {
 		t.Errorf("expected content %s, got %s", newContent, updatedPeb.Content)
 	}
 
-	if !strings.Contains(output, "Updated content of "+id+".") {
+	if !strings.Contains(output, "Updated content of "+id+" to \""+newContent+"\".") {
 		t.Errorf("expected output to contain content update message, got: %s", output)
 	}
 }
@@ -236,7 +236,7 @@ func TestUpdateCommandType(t *testing.T) {
 		t.Errorf("expected type bug, got %s", updatedPeb.Type)
 	}
 
-	if !strings.Contains(output, "Updated type of "+id+".") {
+	if !strings.Contains(output, "Updated type of "+id+" to bug.") {
 		t.Errorf("expected output to contain type update message, got: %s", output)
 	}
 }
@@ -294,7 +294,7 @@ func TestUpdateCommandBlockedBy(t *testing.T) {
 		t.Errorf("expected blocked-by %s, got %s", blockingID, updatedPeb.BlockedBy[0])
 	}
 
-	if !strings.Contains(output, "Updated blocked-by list of "+id+".") {
+	if !strings.Contains(output, "Updated blocked-by list of "+id+" to ["+blockingID+"].") {
 		t.Errorf("expected output to contain blocked-by update message, got: %s", output)
 	}
 }
@@ -608,13 +608,13 @@ func TestUpdateCommandMultipleFields(t *testing.T) {
 		t.Errorf("expected status in-progress, got %s", updatedPeb.Status)
 	}
 
-	if !strings.Contains(output, "Updated title of "+id+".") {
+	if !strings.Contains(output, "Updated title of "+id+" to \""+newTitle+"\".") {
 		t.Errorf("expected output to contain title update message, got: %s", output)
 	}
-	if !strings.Contains(output, "Updated content of "+id+".") {
+	if !strings.Contains(output, "Updated content of "+id+" to \""+newContent+"\".") {
 		t.Errorf("expected output to contain content update message, got: %s", output)
 	}
-	if !strings.Contains(output, "Updated status of "+id+".") {
+	if !strings.Contains(output, "Updated status of "+id+" to in-progress.") {
 		t.Errorf("expected output to contain status update message, got: %s", output)
 	}
 }
