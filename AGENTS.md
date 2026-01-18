@@ -52,3 +52,14 @@ as markdown files with YAML frontmatter.
 - Keep structs simple, focus on single responsibility
 - Use pointer receivers for methods that modify state
 - Use value receivers for methods that don't modify state
+
+## Code Review
+
+**MANDATORY:** You MUST invoke the `@code-reviewer` agent after completing any non-trivial code changes.
+
+Invoke the code-reviewer by mentioning it in your message:
+```
+@code-reviewer review the changes I just made
+```
+
+This ensures all code meets the project's quality standards before marking tasks as complete.
