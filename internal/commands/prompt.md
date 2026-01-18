@@ -3,6 +3,26 @@
 You are working with "peb" (Pebbles), an agent-first Go CLI tool for tracking
 tasks, bugs, features, and epics.
 
+## ⚠️ CRITICAL REQUIREMENT
+
+**ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
+
+Before doing ANY non-trivial task, bug fix, feature, or code change:
+1. Create a peb to track it
+2. Update its status as you work
+3. Mark it as fixed when complete
+
+Trivial work (simple, single-step tasks that can be completed in < 3 minutes) can be done without a peb.
+
+**Rules:**
+
+1. Every non-trivial task, bug, feature, or code change must be tracked as a peb
+2. Create a peb before starting the work
+3. Update peb status throughout the lifecycle
+4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
+5. Use `blocked-by` to establish clear dependencies between related work
+6. For complex work, create an `epic` peb that blocks smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
+
 ## Core Concepts
 
 **Peb Structure:** A "peb" represents a task/bug/feature/epic with these fields:
@@ -80,19 +100,6 @@ peb query status:new type:bug
 # Output specific fields only
 peb query --fields id,title
 ```
-
-## Agent Requirements
-
-**MANDATORY:** You MUST use peb for tracking all tasks, bugs, and features.
-
-**Rules:**
-
-1. Every task, bug, or feature must be tracked as a peb
-2. Create a peb before starting any work
-3. Update peb status throughout the lifecycle
-4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
-5. Use `blocked-by` to establish clear dependencies between related work
-6. For complex work, create an `epic` peb that blocks smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
 
 ## Best Practices
 
