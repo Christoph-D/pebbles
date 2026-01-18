@@ -212,15 +212,24 @@ func applyFilters(p *peb.Peb, filters []filterFunc) bool {
 
 func parseFields(fieldsStr string) ([]string, error) {
 	fields := strings.Split(fieldsStr, ",")
+	var parsedFields []string
+	hasID := false
 	for _, field := range fields {
 		field = strings.TrimSpace(field)
 		switch field {
 		case "id", "type", "status", "title", "created", "changed", "blocked-by":
+			parsedFields = append(parsedFields, field)
+			if field == "id" {
+				hasID = true
+			}
 		default:
 			return nil, fmt.Errorf("unknown field: %s", field)
 		}
 	}
-	return fields, nil
+	if !hasID {
+		parsedFields = append([]string{"id"}, parsedFields...)
+	}
+	return parsedFields, nil
 }
 
 func buildOutput(p *peb.Peb, fields []string) map[string]interface{} {
