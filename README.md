@@ -112,8 +112,8 @@ Pebbles can work with any coding agent that supports running shell commands. Sho
 
 ### Human Commands
 
-#### `peb init`
-Initialize pebbles in current directory (creates `.pebbles/`)
+#### `peb init [--opencode]`
+Initialize pebbles in current directory (creates `.pebbles/`). With `--opencode` flag, also installs the opencode MCP plugin (creates `.opencode/plugin/pebbles.ts`)
 
 #### `peb cleanup`
 Remove all pebbles data (deletes `.pebbles/` directory)
