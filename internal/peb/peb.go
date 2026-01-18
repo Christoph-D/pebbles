@@ -36,6 +36,16 @@ type Peb struct {
 	Content   string   `yaml:"-" json:"content"`
 }
 
+type PebJSON struct {
+	ID        string   `json:"id"`
+	Type      Type     `json:"type,omitempty"`
+	Status    Status   `json:"status,omitempty"`
+	Title     string   `json:"title,omitempty"`
+	Created   string   `json:"created,omitempty"`
+	Changed   string   `json:"changed,omitempty"`
+	BlockedBy []string `json:"blocked-by,omitempty"`
+}
+
 func New(id, title string, pebType Type, status Status, content string) *Peb {
 	now := time.Now()
 	timestamp := now.Local().Format(timestampFormat)

@@ -232,24 +232,26 @@ func parseFields(fieldsStr string) ([]string, error) {
 	return parsedFields, nil
 }
 
-func buildOutput(p *peb.Peb, fields []string) map[string]interface{} {
-	output := make(map[string]interface{})
+func buildOutput(p *peb.Peb, fields []string) *peb.PebJSON {
+	output := &peb.PebJSON{
+		ID: p.ID,
+	}
 	for _, field := range fields {
 		switch field {
-		case "id":
-			output["id"] = p.ID
 		case "type":
-			output["type"] = p.Type
+			output.Type = p.Type
 		case "status":
-			output["status"] = p.Status
+			output.Status = p.Status
 		case "title":
-			output["title"] = p.Title
+			output.Title = p.Title
 		case "created":
-			output["created"] = p.Created
+			output.Created = p.Created
 		case "changed":
-			output["changed"] = p.Changed
+			output.Changed = p.Changed
 		case "blocked-by":
-			output["blocked-by"] = p.BlockedBy
+			if len(p.BlockedBy) > 0 {
+				output.BlockedBy = p.BlockedBy
+			}
 		}
 	}
 	return output

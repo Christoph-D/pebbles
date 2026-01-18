@@ -172,27 +172,26 @@ func TestQueryCommand(t *testing.T) {
 			}
 
 			for _, line := range lines {
-				var result map[string]interface{}
+				var result peb.PebJSON
 				if err := json.Unmarshal([]byte(line), &result); err != nil {
 					t.Fatalf("failed to parse JSON: %v", err)
 				}
 
-				id, ok := result["id"].(string)
-				if !ok {
-					t.Error("missing or invalid id field")
+				if result.ID == "" {
+					t.Error("missing id field")
 					continue
 				}
 
 				found := false
 				for _, wantID := range tt.wantIDs {
-					if id == wantID {
+					if result.ID == wantID {
 						found = true
 						break
 					}
 				}
 
 				if !found {
-					t.Errorf("unexpected ID %s in results", id)
+					t.Errorf("unexpected ID %s in results", result.ID)
 				}
 			}
 		})
@@ -269,10 +268,10 @@ func TestQueryCommandBlockedBy(t *testing.T) {
 	w.Close()
 	os.Stdout = oldStdout
 
-	var results []map[string]interface{}
+	var results []peb.PebJSON
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		var result map[string]interface{}
+		var result peb.PebJSON
 		if err := json.Unmarshal(scanner.Bytes(), &result); err != nil {
 			t.Fatalf("failed to parse JSON: %v", err)
 		}
@@ -285,12 +284,7 @@ func TestQueryCommandBlockedBy(t *testing.T) {
 
 	ids := make([]string, 0, 2)
 	for _, result := range results {
-		id, ok := result["id"].(string)
-		if !ok {
-			t.Error("missing or invalid id field")
-			continue
-		}
-		ids = append(ids, id)
+		ids = append(ids, result.ID)
 	}
 
 	for _, wantID := range []string{id1, id2} {
@@ -378,28 +372,83 @@ func TestQueryCommandFields(t *testing.T) {
 			w.Close()
 			os.Stdout = oldStdout
 
-			var result map[string]interface{}
+			var result peb.PebJSON
 			decoder := json.NewDecoder(r)
 			if err := decoder.Decode(&result); err != nil {
 				t.Fatalf("failed to parse JSON: %v", err)
 			}
 
 			for _, wantField := range tt.want {
-				if _, ok := result[wantField]; !ok {
-					t.Errorf("missing expected field %s", wantField)
+				switch wantField {
+				case "id":
+					if result.ID == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "type":
+					if result.Type == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "status":
+					if result.Status == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "title":
+					if result.Title == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "created":
+					if result.Created == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "changed":
+					if result.Changed == "" {
+						t.Errorf("missing expected field %s", wantField)
+					}
+				case "blocked-by":
+					if result.BlockedBy == nil {
+						t.Errorf("missing expected field %s", wantField)
+					}
 				}
 			}
 
-			for field := range result {
-				found := false
-				for _, wantField := range tt.want {
-					if field == wantField {
-						found = true
-						break
+			allFields := []string{"id", "type", "status", "title", "created", "changed", "blocked-by"}
+			wantMap := make(map[string]bool)
+			for _, w := range tt.want {
+				wantMap[w] = true
+			}
+
+			for _, field := range allFields {
+				if !wantMap[field] {
+					switch field {
+					case "id":
+						if result.ID != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "type":
+						if result.Type != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "status":
+						if result.Status != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "title":
+						if result.Title != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "created":
+						if result.Created != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "changed":
+						if result.Changed != "" {
+							t.Errorf("unexpected field %s in output", field)
+						}
+					case "blocked-by":
+						if result.BlockedBy != nil {
+							t.Errorf("unexpected field %s in output", field)
+						}
 					}
-				}
-				if !found {
-					t.Errorf("unexpected field %s in output", field)
 				}
 			}
 		})
@@ -490,5 +539,108 @@ func TestQueryCommandInvalidField(t *testing.T) {
 	err = app.Run([]string{"peb", "query", "--fields=invalid"})
 	if err == nil {
 		t.Error("expected error for invalid field")
+	}
+}
+
+func TestQueryCommandFieldOrdering(t *testing.T) {
+	pebblesDir, s, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origWd)
+
+	if err := os.Chdir(pebblesDir); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := peb.New(id, "Test peb", peb.TypeTask, peb.StatusNew, "Test content")
+	if err := s.Save(p); err != nil {
+		t.Fatal(err)
+	}
+
+	app := &cli.App{
+		Commands: []*cli.Command{QueryCommand()},
+	}
+
+	r, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "query"})
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	var output string
+	scanner := bufio.NewScanner(r)
+	if scanner.Scan() {
+		output = scanner.Text()
+	}
+
+	expected := `{"id":"` + id + `","type":"task","status":"new","title":"Test peb"}`
+	if output != expected {
+		t.Errorf("expected output:\n%s\ngot:\n%s", expected, output)
+	}
+}
+
+func TestQueryCommandFieldOrderingWithBlockedBy(t *testing.T) {
+	pebblesDir, s, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origWd)
+
+	if err := os.Chdir(pebblesDir); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := peb.New(id, "Test peb with blocker", peb.TypeTask, peb.StatusNew, "Test content")
+	p.BlockedBy = []string{"peb-xxxx"}
+	if err := s.Save(p); err != nil {
+		t.Fatal(err)
+	}
+
+	app := &cli.App{
+		Commands: []*cli.Command{QueryCommand()},
+	}
+
+	r, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "query"})
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
+
+	var output string
+	scanner := bufio.NewScanner(r)
+	if scanner.Scan() {
+		output = scanner.Text()
+	}
+
+	expected := `{"id":"` + id + `","type":"task","status":"new","title":"Test peb with blocker","blocked-by":["peb-xxxx"]}`
+	if output != expected {
+		t.Errorf("expected output:\n%s\ngot:\n%s", expected, output)
 	}
 }
