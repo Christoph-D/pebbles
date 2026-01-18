@@ -339,7 +339,7 @@ func TestQueryCommandFields(t *testing.T) {
 		{
 			name:   "default fields",
 			fields: "",
-			want:   []string{"id", "type", "status", "title"},
+			want:   []string{"id", "type", "status", "title", "blocked-by"},
 		},
 		{
 			name:   "custom fields",

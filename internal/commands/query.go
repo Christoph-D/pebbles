@@ -52,8 +52,8 @@ Examples:
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "fields",
-				Usage:   "Comma-separated list of fields to output (default: id,type,status,title)",
-				Value:   "id,type,status,title",
+				Usage:   "Comma-separated list of fields to output (default: id,type,status,title,blocked-by)",
+				Value:   "id,type,status,title,blocked-by",
 				Aliases: []string{"f"},
 			},
 		},
