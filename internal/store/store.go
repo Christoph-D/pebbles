@@ -75,6 +75,16 @@ func (s *Store) Exists(id string) bool {
 	return ok
 }
 
+func (s *Store) Delete(p *peb.Peb) error {
+	filename := peb.Filename(p)
+	path := filepath.Join(s.dir, filename)
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("failed to delete peb file: %w", err)
+	}
+	delete(s.pebs, p.ID)
+	return nil
+}
+
 func (s *Store) GenerateUniqueID(prefix string, length int) (string, error) {
 	const maxAttempts = 1000
 	for range maxAttempts {

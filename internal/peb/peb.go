@@ -53,3 +53,21 @@ func New(id, title string, pebType Type, status Status, content string) *Peb {
 func (p *Peb) UpdateTimestamp() {
 	p.Changed = time.Now().Local().Format(timestampFormat)
 }
+
+func IsClosed(status Status) bool {
+	for _, s := range StatusClosed {
+		if status == s {
+			return true
+		}
+	}
+	return false
+}
+
+func IsOpen(status Status) bool {
+	for _, s := range StatusOpen {
+		if status == s {
+			return true
+		}
+	}
+	return false
+}

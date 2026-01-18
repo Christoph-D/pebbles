@@ -112,16 +112,12 @@ func parseFilters(args []string) ([]filterFunc, error) {
 					for _, v := range values {
 						switch v {
 						case "open":
-							for _, s := range peb.StatusOpen {
-								if p.Status == s {
-									return true
-								}
+							if peb.IsOpen(p.Status) {
+								return true
 							}
 						case "closed":
-							for _, s := range peb.StatusClosed {
-								if p.Status == s {
-									return true
-								}
+							if peb.IsClosed(p.Status) {
+								return true
 							}
 						default:
 							if string(p.Status) == v {
@@ -135,21 +131,11 @@ func parseFilters(args []string) ([]filterFunc, error) {
 				switch value {
 				case "open":
 					filters = append(filters, func(p *peb.Peb) bool {
-						for _, s := range peb.StatusOpen {
-							if p.Status == s {
-								return true
-							}
-						}
-						return false
+						return peb.IsOpen(p.Status)
 					})
 				case "closed":
 					filters = append(filters, func(p *peb.Peb) bool {
-						for _, s := range peb.StatusClosed {
-							if p.Status == s {
-								return true
-							}
-						}
-						return false
+						return peb.IsClosed(p.Status)
 					})
 				default:
 					filters = append(filters, func(p *peb.Peb) bool {
