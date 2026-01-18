@@ -39,13 +39,19 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
           const proc = spawn(['peb', 'new'], {
             stdin: 'pipe',
             stdout: 'pipe',
+            stderr: 'pipe',
           });
           proc.stdin.write(jsonString);
           proc.stdin.end();
 
-          const result = await new Response(proc.stdout).text();
+          const [stdout, stderr] = await Promise.all([
+            new Response(proc.stdout).text(),
+            new Response(proc.stderr).text(),
+          ]);
           await proc.exited;
-          return result.trim();
+          const result = stdout.trim();
+          const errorOutput = stderr.trim();
+          return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
         },
       }),
       peb_read: tool({
@@ -56,10 +62,16 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
         async execute(args) {
           const proc = spawn(['peb', 'read', ...args.id], {
             stdout: 'pipe',
+            stderr: 'pipe',
           });
-          const result = await new Response(proc.stdout).text();
+          const [stdout, stderr] = await Promise.all([
+            new Response(proc.stdout).text(),
+            new Response(proc.stderr).text(),
+          ]);
           await proc.exited;
-          return result.trim();
+          const result = stdout.trim();
+          const errorOutput = stderr.trim();
+          return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
         },
       }),
       peb_update: tool({
@@ -83,10 +95,16 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
           const jsonString = JSON.stringify(json);
           const proc = spawn(['peb', 'update', args.id, jsonString], {
             stdout: 'pipe',
+            stderr: 'pipe',
           });
-          const result = await new Response(proc.stdout).text();
+          const [stdout, stderr] = await Promise.all([
+            new Response(proc.stdout).text(),
+            new Response(proc.stderr).text(),
+          ]);
           await proc.exited;
-          return result.trim();
+          const result = stdout.trim();
+          const errorOutput = stderr.trim();
+          return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
         },
       }),
       peb_query: tool({
@@ -106,10 +124,16 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
 
           const proc = spawn(cmdArgs, {
             stdout: 'pipe',
+            stderr: 'pipe',
           });
-          const result = await new Response(proc.stdout).text();
+          const [stdout, stderr] = await Promise.all([
+            new Response(proc.stdout).text(),
+            new Response(proc.stderr).text(),
+          ]);
           await proc.exited;
-          return result.trim();
+          const result = stdout.trim();
+          const errorOutput = stderr.trim();
+          return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
         },
       }),
     },
