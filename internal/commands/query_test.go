@@ -101,6 +101,36 @@ func TestQueryCommand(t *testing.T) {
 			args:    []string{"status:closed"},
 			wantIDs: []string{id3, id4},
 		},
+		{
+			name:    "filter by type OR",
+			args:    []string{"type:(bug|feature)"},
+			wantIDs: []string{id2, id4},
+		},
+		{
+			name:    "filter by status OR",
+			args:    []string{"status:(new|fixed)"},
+			wantIDs: []string{id1, id3},
+		},
+		{
+			name:    "filter by status OR closed|new",
+			args:    []string{"status:(closed|new)"},
+			wantIDs: []string{id1, id3, id4},
+		},
+		{
+			name:    "filter by status single value in parentheses",
+			args:    []string{"status:(new)"},
+			wantIDs: []string{id1},
+		},
+		{
+			name:    "filter by type OR with spaces",
+			args:    []string{"type:( bug | feature )"},
+			wantIDs: []string{id2, id4},
+		},
+		{
+			name:    "filter by type OR with status",
+			args:    []string{"type:(bug|feature)", "status:open"},
+			wantIDs: []string{id2},
+		},
 	}
 
 	for _, tt := range tests {

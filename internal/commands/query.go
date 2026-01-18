@@ -34,6 +34,10 @@ Type filters:
   type:epic            Show epics
   type:task            Show tasks
 
+OR syntax:
+  type:(bug|feature)   Show bugs or features
+  status:(new|fixed)   Show new or fixed pebs
+
 Other filters:
   blocked-by:peb-xxxx  Show pebs blocked by a specific peb ID
 
@@ -42,6 +46,7 @@ Examples:
   peb query status:new               Show all new pebs
   peb query type:bug                 Show all bugs
   peb query status:new type:feature  Show new features only
+  peb query type:(bug|feature)       Show bugs or features
   peb query blocked-by:peb-xxxx      Show pebs blocked by peb-xxxx
   peb query --fields id,title        Show only id and title fields`,
 		Flags: []cli.Flag{
@@ -102,34 +107,71 @@ func parseFilters(args []string) ([]filterFunc, error) {
 
 		switch key {
 		case "status":
-			switch value {
-			case "open":
+			if values := parseOrValues(value); len(values) > 0 {
 				filters = append(filters, func(p *peb.Peb) bool {
-					for _, s := range peb.StatusOpen {
-						if p.Status == s {
-							return true
+					for _, v := range values {
+						switch v {
+						case "open":
+							for _, s := range peb.StatusOpen {
+								if p.Status == s {
+									return true
+								}
+							}
+						case "closed":
+							for _, s := range peb.StatusClosed {
+								if p.Status == s {
+									return true
+								}
+							}
+						default:
+							if string(p.Status) == v {
+								return true
+							}
 						}
 					}
 					return false
 				})
-			case "closed":
-				filters = append(filters, func(p *peb.Peb) bool {
-					for _, s := range peb.StatusClosed {
-						if p.Status == s {
-							return true
+			} else {
+				switch value {
+				case "open":
+					filters = append(filters, func(p *peb.Peb) bool {
+						for _, s := range peb.StatusOpen {
+							if p.Status == s {
+								return true
+							}
 						}
-					}
-					return false
-				})
-			default:
-				filters = append(filters, func(p *peb.Peb) bool {
-					return string(p.Status) == value
-				})
+						return false
+					})
+				case "closed":
+					filters = append(filters, func(p *peb.Peb) bool {
+						for _, s := range peb.StatusClosed {
+							if p.Status == s {
+								return true
+							}
+						}
+						return false
+					})
+				default:
+					filters = append(filters, func(p *peb.Peb) bool {
+						return string(p.Status) == value
+					})
+				}
 			}
 		case "type":
-			filters = append(filters, func(p *peb.Peb) bool {
-				return string(p.Type) == value
-			})
+			if values := parseOrValues(value); len(values) > 0 {
+				filters = append(filters, func(p *peb.Peb) bool {
+					for _, v := range values {
+						if string(p.Type) == v {
+							return true
+						}
+					}
+					return false
+				})
+			} else {
+				filters = append(filters, func(p *peb.Peb) bool {
+					return string(p.Type) == value
+				})
+			}
 		case "blocked-by":
 			filters = append(filters, func(p *peb.Peb) bool {
 				for _, id := range p.BlockedBy {
@@ -145,6 +187,32 @@ func parseFilters(args []string) ([]filterFunc, error) {
 	}
 
 	return filters, nil
+}
+
+func parseOrValues(value string) []string {
+	if !strings.HasPrefix(value, "(") || !strings.HasSuffix(value, ")") {
+		return nil
+	}
+
+	inner := strings.Trim(value[1:len(value)-1], " ")
+	if !strings.Contains(inner, "|") {
+		trimmed := strings.TrimSpace(inner)
+		if trimmed != "" {
+			return []string{trimmed}
+		}
+		return nil
+	}
+
+	parts := strings.Split(inner, "|")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+
+	return values
 }
 
 func applyFilters(p *peb.Peb, filters []filterFunc) bool {
