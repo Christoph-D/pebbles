@@ -29,8 +29,6 @@ This creates a `.pebbles/` directory with a config file.
 echo '{"title":"Fix authentication bug","content":"Users cannot log in","type":"bug"}' | peb new
 ```
 
-Output: `Created new pebble peb-ab12 in .pebbles/peb-ab12--fix-authentication-bug.md`
-
 ### 3. Query Tasks
 
 ```bash
