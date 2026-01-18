@@ -102,7 +102,7 @@ Agent: I'll create a task for this and start working on it.
 Task peb-xyz1 marked as fixed!
 ```
 
-**Note:** This automatic tracking only works when the pebbles-prime plugin is installed.
+**Note:** This automatic tracking only works when the pebbles plugin is installed.
 
 ### Other Coding Agents
 
