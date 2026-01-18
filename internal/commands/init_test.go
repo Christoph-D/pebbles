@@ -158,3 +158,119 @@ func TestInitCommandIdempotent(t *testing.T) {
 		t.Fatalf("config.toml was modified on second init")
 	}
 }
+
+func TestInitCommandWithOpencode(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalDir)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+
+	app := &cli.App{
+		Commands: []*cli.Command{InitCommand()},
+	}
+
+	_, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "init", "--opencode"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("init with --opencode failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	opencodeDir := ".opencode"
+	pluginDir := filepath.Join(opencodeDir, "plugin")
+
+	if _, err := os.Stat(opencodeDir); os.IsNotExist(err) {
+		t.Fatalf(".opencode directory was not created")
+	}
+
+	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
+		t.Fatalf(".opencode/plugin/ directory was not created")
+	}
+
+	pluginPath := filepath.Join(pluginDir, "pebbles.ts")
+	content, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("failed to read pebbles.ts: %v", err)
+	}
+
+	if !strings.Contains(string(content), "PebblesPlugin") {
+		t.Errorf("pebbles.ts does not contain expected content")
+	}
+	if !strings.Contains(string(content), "export const") {
+		t.Errorf("pebbles.ts does not contain expected export")
+	}
+}
+
+func TestInitCommandWithOpencodeIdempotent(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalDir)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+
+	pluginPath := filepath.Join(".opencode", "plugin", "pebbles.ts")
+
+	app := &cli.App{
+		Commands: []*cli.Command{InitCommand()},
+	}
+
+	_, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "init", "--opencode"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("first init with --opencode failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	content1, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("failed to read pebbles.ts after first init: %v", err)
+	}
+
+	_, w, _ = os.Pipe()
+	oldStdout = os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "init", "--opencode"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("second init with --opencode should be idempotent, but failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	content2, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("failed to read pebbles.ts after second init: %v", err)
+	}
+
+	if string(content1) != string(content2) {
+		t.Fatalf("pebbles.ts was modified on second init")
+	}
+}

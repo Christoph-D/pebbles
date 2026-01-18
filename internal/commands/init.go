@@ -1,6 +1,7 @@
 package commands
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+//go:embed pebbles.ts
+var pebblesPlugin string
+
 func InitCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "init",
@@ -16,7 +20,7 @@ func InitCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "opencode",
-				Usage: "Install or update opencode MCP plugin configuration",
+				Usage: "Install or update opencode MCP plugin (overwrites existing plugin file)",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -53,30 +57,9 @@ func installOpencodePlugin() error {
 		return fmt.Errorf("failed to create .opencode/plugin/ directory: %w", err)
 	}
 
-	srcPluginPath := filepath.Join(".opencode", "plugin", "pebbles.ts")
-	dstPluginPath := filepath.Join(pluginDir, "pebbles.ts")
-
-	if _, err := os.Stat(srcPluginPath); err == nil {
-		src, err := os.ReadFile(srcPluginPath)
-		if err != nil {
-			return fmt.Errorf("failed to read plugin file: %w", err)
-		}
-		if err := os.WriteFile(dstPluginPath, src, 0644); err != nil {
-			return fmt.Errorf("failed to write plugin file: %w", err)
-		}
-	}
-
-	srcPackagePath := filepath.Join(".opencode", "package.json")
-	dstPackagePath := filepath.Join(opencodeDir, "package.json")
-
-	if _, err := os.Stat(srcPackagePath); err == nil {
-		src, err := os.ReadFile(srcPackagePath)
-		if err != nil {
-			return fmt.Errorf("failed to read package.json: %w", err)
-		}
-		if err := os.WriteFile(dstPackagePath, src, 0644); err != nil {
-			return fmt.Errorf("failed to write package.json: %w", err)
-		}
+	pluginPath := filepath.Join(pluginDir, "pebbles.ts")
+	if err := os.WriteFile(pluginPath, []byte(pebblesPlugin), 0644); err != nil {
+		return fmt.Errorf("failed to write plugin file: %w", err)
 	}
 
 	return nil

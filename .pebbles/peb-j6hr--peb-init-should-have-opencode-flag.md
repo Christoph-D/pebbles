@@ -2,9 +2,9 @@
 id: peb-j6hr
 title: peb init should have --opencode flag
 type: feature
-status: in-progress
+status: fixed
 created: "2026-01-18T13:33:29+01:00"
-changed: "2026-01-18T22:59:21+01:00"
+changed: "2026-01-18T23:27:51+01:00"
 blocked-by:
     - peb-h9ow
 ---
