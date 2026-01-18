@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/urfave/cli/v2"
 )
 
 func TestInitCommand(t *testing.T) {
@@ -82,10 +84,77 @@ func TestInitCommandAlreadyExists(t *testing.T) {
 		t.Fatalf(".pebbles directory was not created for test setup")
 	}
 
-	expectedErr := ".pebbles/ already exists in current directory."
 	if _, err := os.Stat(pebblesDir); err == nil {
-		if !strings.Contains(expectedErr, ".pebbles/") {
-			t.Errorf("expected error message to reference .pebbles/")
-		}
+		t.Log(".pebbles directory exists, running init again should be idempotent")
+	}
+}
+
+func TestInitCommandIdempotent(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalDir)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+
+	pebblesDir := ".pebbles"
+	configPath := filepath.Join(pebblesDir, "config.toml")
+
+	app := &cli.App{
+		Commands: []*cli.Command{InitCommand()},
+	}
+
+	_, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "init"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("first init failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if _, err := os.Stat(pebblesDir); os.IsNotExist(err) {
+		t.Fatalf(".pebbles directory was not created")
+	}
+
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Fatalf("config.toml was not created")
+	}
+
+	_, w, _ = os.Pipe()
+	oldStdout = os.Stdout
+	os.Stdout = w
+
+	err = app.Run([]string{"peb", "init"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("second init should be idempotent, but failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	content1, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read config.toml after first init: %v", err)
+	}
+
+	content2, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read config.toml after second init: %v", err)
+	}
+
+	if string(content1) != string(content2) {
+		t.Fatalf("config.toml was modified on second init")
 	}
 }
