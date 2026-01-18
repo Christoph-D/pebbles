@@ -22,7 +22,6 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 
 ENV OPENCODE_CONFIG=/home/$USERNAME/persistent-config/opencode.json
-RUN mkdir /home/$USERNAME/persistent-config/opencode && mkdir -p /home/$USERNAME/.local/share/ && ln -s /home/$USERNAME/persistent-config/opencode /home/$USERNAME/.local/share/opencode
 RUN curl -fsSL https://opencode.ai/install | bash
 ENV PATH="/home/$USERNAME/.opencode/bin:$PATH"
 

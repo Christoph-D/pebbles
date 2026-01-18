@@ -45,5 +45,6 @@
     "mounts": [
         "source=config-pebbles,target=/home/pebbles/persistent-config,type=volume",
         "source=/etc/localtime,target=/usr/share/zoneinfo/hostlocaltime,type=bind,readonly"
-    ]
+    ],
+    "postCreateCommand": "bash .devcontainer/setup.sh"
 }
