@@ -21,6 +21,8 @@ peb init
 
 This creates a `.pebbles/` directory with a config file.
 
+> **Important:** `peb init` and `peb cleanup` are the only commands designed for human use. All other commands (`peb new`, `peb read`, `peb update`, `peb query`, `peb prime`) are designed for AI agents and are not human-friendly. These commands use JSON input/output and are optimized for programmatic use.
+
 ### 2. Create a New Task
 
 ```bash
@@ -54,60 +56,25 @@ peb update peb-ab12 '{"status":"fixed"}'
 
 ## Opencode Integration
 
-To use pebbles with opencode, you need to add the pebbles-prime plugin. This plugin provides task tracking instructions to the opencode agent.
+To use pebbles with opencode, you need to add the pebbles plugin. This plugin provides:
+- **MCP Server** - Tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`) for direct agent integration
+- **Agent Instructions** - Automatically injected via `peb prime --mcp`
 
 ### Setup
 
-Create the plugin file at one of these locations:
+Copy [the plugin file](.opencode/plugin/pebbles.ts) to one of these locations:
 
-**Project-specific (recommended):**
-```bash
-mkdir -p .opencode/plugin
-```
-
-Then create `.opencode/plugin/pebbles-prime.ts`:
-
-```typescript
-import type { Plugin } from "@opencode-ai/plugin";
-
-/**
- * Pebbles prime plugin for opencode
- *
- * Put this file into one of these locations:
- *
- * - Project local: .opencode/plugin/pebbles-prime.ts
- * - User global: ~/.opencode/plugin/pebbles-prime.ts
- */
-
-export const PebblesPrimePlugin: Plugin = async ({ $ }) => {
-  const prime = await $`peb prime`.text();
-
-  return {
-    "experimental.chat.system.transform": async (_, output) => {
-      output.system.push(prime);
-    },
-    "experimental.session.compacting": async (_, output) => {
-      output.context.push(prime);
-    },
-  };
-};
-
-export default PebblesPrimePlugin;
-```
-
-**User global (all projects):**
-```bash
-mkdir -p ~/.opencode/plugin
-# Create ~/.opencode/plugin/pebbles-prime.ts with the same content
-```
+- **Project-specific (recommended):** `.opencode/plugin/pebbles.ts`
+- **User global (all projects):** `~/.opencode/plugin/pebbles.ts`
 
 ### How It Works
 
 The plugin automatically:
-1. Runs `peb prime` to get agent instructions
+1. Runs `peb prime --mcp` to get agent instructions with MCP server tools
 2. Injects these instructions into the opencode chat system
-3. Ensures instructions persist during session compaction
-4. Agents automatically track work without manual prompts
+3. Provides MCP tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`) for direct access
+4. Ensures instructions persist during session compaction
+5. Agents automatically track work without manual prompts using the provided tools
 
 ## Using Pebbles with Coding Agents
 
@@ -139,64 +106,45 @@ Task peb-xyz1 marked as fixed!
 
 **Note:** This automatic tracking only works when the pebbles-prime plugin is installed.
 
-### Creating Dependent Tasks
-
-When tasks depend on each other, use `blocked-by`:
-
-```bash
-# Create the blocking task
-echo '{"title":"Setup database","content":"Create database schema","type":"task"}' | peb new
-
-# Create the dependent task
-echo '{"title":"Build API","content":"Create REST endpoints","type":"task","blocked-by":["peb-ab12"]}' | peb new
-```
-
-### Querying Task Status
-
-Check what's pending:
-
-```bash
-# Show all open (new or in-progress) tasks
-peb query status:open
-
-# Show specific pebs by ID
-peb query id:peb-ab12
-peb query id:(peb-ab12|peb-cd34)
-
-# Show what's blocked by a specific task
-peb query blocked-by:peb-ab12
-```
-
 ### Other Coding Agents
 
 Pebbles can work with any coding agent that supports running shell commands. Show your agent the output of `peb prime` to teach it how to use pebbles.
 
 ## Command Reference
 
-### `peb init`
+### Human Commands
+
+#### `peb init`
 Initialize pebbles in current directory (creates `.pebbles/`)
 
-### `peb new`
+#### `peb cleanup`
+Remove all pebbles data (deletes `.pebbles/` directory)
+
+### AI Agent Commands
+
+> **Note:** The following commands are designed for AI agents and use JSON for input/output. They are not intended for human use.
+
+#### `peb new`
 Create a new task from JSON via stdin
 ```bash
 echo '{"title":"Fix bug","content":"Description...","type":"bug"}' | peb new
 ```
 
-### `peb read <id> [<id> ...]`
+#### `peb read <id> [<id> ...]`
 Display full task details as JSON (accepts one or more IDs)
 ```bash
 peb read peb-ab12
 peb read peb-ab12 peb-cd34 peb-ef56
 ```
 
-### `peb update <id> <json>`
+#### `peb update <id> <json>`
 Update task fields
 ```bash
 peb update peb-ab12 '{"status":"in-progress"}'
 peb update peb-ab12 '{"title":"New title"}'
 ```
 
-### `peb query [filters]`
+#### `peb query [filters]`
 Search and list tasks
 ```bash
 peb query                              # List all
@@ -208,8 +156,8 @@ peb query status:new type:bug          # New bugs only
 peb query --fields id,title status:new # Output specific fields
 ```
 
-### `peb prime`
-Output agent instructions
+#### `peb prime [--mcp]`
+Output agent instructions. With `--mcp` flag, outputs instructions formatted for MCP server integration.
 
 ## Data Model
 
