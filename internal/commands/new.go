@@ -68,12 +68,11 @@ func NewCommand() *cli.Command {
 			p := peb.New(id, input.Title, pebType, peb.StatusNew, input.Content)
 			p.BlockedBy = input.BlockedBy
 
-			filename := peb.Filename(p)
 			if err := s.Save(p); err != nil {
 				return fmt.Errorf("failed to save peb: %w", err)
 			}
 
-			fmt.Printf("Created new pebble %s in .pebbles/%s\n", id, filename)
+			fmt.Printf("Created new pebble %s\n", id)
 			return nil
 		},
 	}
