@@ -49,12 +49,12 @@ export const PebblesPrimePlugin: Plugin = async ({ $ }) => {
         },
       }),
       peb_read: tool({
-        description: "Read a peb by ID. Returns full peb data as JSON.",
+        description: "Read one or more pebs by ID. Returns full pebs data as JSON.",
         args: {
-          id: tool.schema.string().describe("The peb ID to read (e.g., peb-xxxx)"),
+          id: tool.schema.array(tool.schema.string()).describe("Array of peb IDs to read (e.g., ['peb-xxxx', 'peb-yyyy'])"),
         },
         async execute(args) {
-          const proc = spawn(['peb', 'read', args.id], {
+          const proc = spawn(['peb', 'read', ...args.id], {
             stdout: 'pipe',
           });
           const result = await new Response(proc.stdout).text();

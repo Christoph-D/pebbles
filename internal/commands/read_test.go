@@ -166,3 +166,69 @@ func TestReadCommandFileIntegrity(t *testing.T) {
 		t.Errorf("expected content %q in file, got %q", expectedContent, filePeb.Content)
 	}
 }
+
+func TestReadCommandMultipleIDs(t *testing.T) {
+	_, s, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	id1, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id2, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id3, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p1 := peb.New(id1, "First peb", peb.TypeTask, peb.StatusNew, "Content 1")
+	if err := s.Save(p1); err != nil {
+		t.Fatal(err)
+	}
+
+	p2 := peb.New(id2, "Second peb", peb.TypeBug, peb.StatusInProgress, "Content 2")
+	if err := s.Save(p2); err != nil {
+		t.Fatal(err)
+	}
+
+	p3 := peb.New(id3, "Third peb", peb.TypeFeature, peb.StatusFixed, "Content 3")
+	if err := s.Save(p3); err != nil {
+		t.Fatal(err)
+	}
+
+	pebs := []string{id1, id2, id3}
+	retrieved := make([]peb.Peb, 0, len(pebs))
+
+	for _, id := range pebs {
+		p, ok := s.Get(id)
+		if !ok {
+			t.Fatalf("peb %s not found", id)
+		}
+		retrieved = append(retrieved, *p)
+	}
+
+	if len(retrieved) != 3 {
+		t.Errorf("expected 3 pebs, got %d", len(retrieved))
+	}
+
+	if retrieved[0].ID != id1 || retrieved[0].Title != "First peb" {
+		t.Errorf("first peb mismatch")
+	}
+	if retrieved[1].ID != id2 || retrieved[1].Title != "Second peb" {
+		t.Errorf("second peb mismatch")
+	}
+	if retrieved[2].ID != id3 || retrieved[2].Title != "Third peb" {
+		t.Errorf("third peb mismatch")
+	}
+
+	encoder := json.NewEncoder(&bytes.Buffer{})
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(retrieved); err != nil {
+		t.Fatal(err)
+	}
+}

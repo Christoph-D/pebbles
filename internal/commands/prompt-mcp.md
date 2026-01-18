@@ -44,7 +44,7 @@ Terminology:
 **Before starting work:**
 
 1. Use `peb_query` with `filters: ["status:open"]` to find work
-2. Use `peb_read` with the peb ID to understand requirements
+2. Use `peb_read` with the peb ID(s) to understand requirements
 
 **While working:**
 
