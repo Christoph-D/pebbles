@@ -13,17 +13,31 @@ import (
 //go:embed prompt.md
 var promptTemplate string
 
+//go:embed prompt-mcp.md
+var mcpPromptTemplate string
+
 func PrimeCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "prime",
 		Usage: "Primes the coding agent",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "mcp",
+				Usage: "Print the MCP prompt instead of the normal prompt",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
 
-			tmpl, err := template.New("prompt").Parse(promptTemplate)
+			templateContent := promptTemplate
+			if c.Bool("mcp") {
+				templateContent = mcpPromptTemplate
+			}
+
+			tmpl, err := template.New("prompt").Parse(templateContent)
 			if err != nil {
 				return err
 			}
