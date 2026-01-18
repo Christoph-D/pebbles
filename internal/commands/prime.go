@@ -10,10 +10,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-//go:embed prompt.md
+//go:embed data/prompt.md
 var promptTemplate string
 
-//go:embed prompt-mcp.md
+//go:embed data/prompt-mcp.md
 var mcpPromptTemplate string
 
 func PrimeCommand() *cli.Command {

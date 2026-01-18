@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-//go:embed pebbles.ts
+//go:embed data/pebbles.ts
 var pebblesPlugin string
 
 func InitCommand() *cli.Command {
