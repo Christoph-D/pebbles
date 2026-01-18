@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/Christoph-D/pebbles/internal/config"
@@ -79,6 +80,10 @@ Examples:
 			}
 
 			pebs := s.All()
+
+			sort.Slice(pebs, func(i, j int) bool {
+				return pebs[i].ID < pebs[j].ID
+			})
 
 			for _, p := range pebs {
 				if applyFilters(p, filters) {
