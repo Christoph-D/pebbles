@@ -60,19 +60,16 @@ To use pebbles with opencode, you need to add the pebbles plugin. This plugin pr
 
 ### Setup
 
-Copy [the plugin file](.opencode/plugin/pebbles.ts) to one of these locations:
+Run `peb init --opencode` to automatically install the plugin to `.opencode/plugin/pebbles.ts`.
 
-- **Project-specific (recommended):** `.opencode/plugin/pebbles.ts`
-- **User global (all projects):** `~/.opencode/plugin/pebbles.ts`
+For global installation (all projects), manually copy [the plugin file](.opencode/plugin/pebbles.ts) to `~/.opencode/plugin/pebbles.ts`.
 
 ### How It Works
 
-The plugin automatically:
-1. Runs `peb prime --mcp` to get agent instructions with MCP server tools
-2. Injects these instructions into the opencode chat system
-3. Provides MCP tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`) for direct access
-4. Ensures instructions persist during session compaction
-5. Agents automatically track work without manual prompts using the provided tools
+The plugin:
+
+1. Injects the output of `peb prime --mcp` into the prompt
+2. Provides MCP tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`)
 
 ## Using Pebbles with Coding Agents
 
