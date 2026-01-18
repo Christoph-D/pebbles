@@ -62,6 +62,12 @@ peb query
 # Filter by status
 peb query status:new
 
+# Filter by open status (new OR in-progress)
+peb query status:open
+
+# Filter by closed status (fixed OR wont-fix)
+peb query status:closed
+
 # Filter by type
 peb query type:feature
 
@@ -112,7 +118,7 @@ peb query --fields id,title
 
 ```bash
 # 1. Find a bug to work on
-peb query status:new type:bug
+peb query status:open type:bug
 
 # 2. Read details
 peb read {{.PebbleIDPattern}}

@@ -42,6 +42,24 @@ func TestQueryCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	id3, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p3 := peb.New(id3, "Third peb", peb.TypeTask, peb.StatusFixed, "Content 3")
+	if err := s.Save(p3); err != nil {
+		t.Fatal(err)
+	}
+
+	id4, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p4 := peb.New(id4, "Fourth peb", peb.TypeFeature, peb.StatusWontFix, "Content 4")
+	if err := s.Save(p4); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name    string
 		args    []string
@@ -51,7 +69,7 @@ func TestQueryCommand(t *testing.T) {
 		{
 			name:    "list all pebs",
 			args:    []string{},
-			wantIDs: []string{id1, id2},
+			wantIDs: []string{id1, id2, id3, id4},
 		},
 		{
 			name:    "filter by status",
@@ -70,8 +88,18 @@ func TestQueryCommand(t *testing.T) {
 		},
 		{
 			name:    "no results",
-			args:    []string{"status:fixed"},
+			args:    []string{"status:invalid"},
 			wantIDs: []string{},
+		},
+		{
+			name:    "filter by open status",
+			args:    []string{"status:open"},
+			wantIDs: []string{id1, id2},
+		},
+		{
+			name:    "filter by closed status",
+			args:    []string{"status:closed"},
+			wantIDs: []string{id3, id4},
 		},
 	}
 

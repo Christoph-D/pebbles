@@ -76,9 +76,30 @@ func parseFilters(args []string) ([]filterFunc, error) {
 
 		switch key {
 		case "status":
-			filters = append(filters, func(p *peb.Peb) bool {
-				return string(p.Status) == value
-			})
+			switch value {
+			case "open":
+				filters = append(filters, func(p *peb.Peb) bool {
+					for _, s := range peb.StatusOpen {
+						if p.Status == s {
+							return true
+						}
+					}
+					return false
+				})
+			case "closed":
+				filters = append(filters, func(p *peb.Peb) bool {
+					for _, s := range peb.StatusClosed {
+						if p.Status == s {
+							return true
+						}
+					}
+					return false
+				})
+			default:
+				filters = append(filters, func(p *peb.Peb) bool {
+					return string(p.Status) == value
+				})
+			}
 		case "type":
 			filters = append(filters, func(p *peb.Peb) bool {
 				return string(p.Type) == value

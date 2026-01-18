@@ -22,6 +22,9 @@ const (
 	StatusWontFix    Status = "wont-fix"
 )
 
+var StatusOpen = []Status{StatusNew, StatusInProgress}
+var StatusClosed = []Status{StatusFixed, StatusWontFix}
+
 type Peb struct {
 	ID        string   `yaml:"id" json:"id"`
 	Title     string   `yaml:"title" json:"title"`
