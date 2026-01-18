@@ -227,3 +227,7 @@ make test-coverage     # Run with coverage report
 ## License
 
 AGPL-3.0. See LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by [github.com/hmans/beans](https://github.com/hmans/beans) and [github.com/steveyegge/beads/](https://github.com/steveyegge/beads/)
