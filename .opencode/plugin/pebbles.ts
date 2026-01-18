@@ -11,7 +11,7 @@ import { spawn } from "bun";
  * - User global: ~/.opencode/plugin/pebbles.ts
  */
 
-export const PebblesPrimePlugin: Plugin = async ({ $ }) => {
+export const PebblesPlugin: Plugin = async ({ $ }) => {
   const prime = await $`peb prime --mcp`.text();
 
   return {
@@ -116,4 +116,4 @@ export const PebblesPrimePlugin: Plugin = async ({ $ }) => {
   };
 };
 
-export default PebblesPrimePlugin;
+export default PebblesPlugin;
