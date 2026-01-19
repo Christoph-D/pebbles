@@ -63,3 +63,12 @@ Invoke the code-reviewer by mentioning it in your message:
 ```
 
 This ensures all code meets the project's quality standards before marking tasks as complete.
+
+## CLI Command Changes
+
+After making changes to any CLI command, you MUST check if the following places also need to be updated:
+
+- **MCP tools** - `internal/commands/data/pebbles.ts` - Ensure MCP tool definitions reflect the updated command
+- **The prompt** - `internal/commands/data/prompt.md` - Update documentation and examples if command behavior or usage changes
+- **MCP prompt** - `internal/commands/data/prompt-mcp.md` - Update MCP-specific documentation
+- **Other Markdown files** - `README.md`, `AGENTS.md` - Review and update documentation files that reference the command
