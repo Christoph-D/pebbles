@@ -15,15 +15,7 @@ func TestCleanupCommand(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -116,15 +108,7 @@ func TestCleanupCommandNoClosedPebs(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -181,15 +165,7 @@ func TestCleanupCommandAllClosed(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {

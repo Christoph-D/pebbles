@@ -14,15 +14,7 @@ func TestQueryCommand(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -237,15 +229,7 @@ func TestQueryCommandBlockedBy(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	blockingID, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -340,15 +324,7 @@ func TestQueryCommandFields(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -494,15 +470,7 @@ func TestQueryCommandInvalidFilter(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -548,15 +516,7 @@ func TestQueryCommandInvalidField(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -581,15 +541,7 @@ func TestQueryCommandFieldOrdering(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -632,15 +584,7 @@ func TestQueryCommandFieldOrderingWithBlockedBy(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {

@@ -14,15 +14,7 @@ func TestDeleteCommand(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -79,15 +71,7 @@ func TestDeleteCommandMultipleIDs(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -168,21 +152,13 @@ func TestDeleteCommandNotFound(t *testing.T) {
 	pebblesDir, _, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	app := &cli.App{
 		Commands: []*cli.Command{DeleteCommand()},
 	}
 
-	err = app.Run([]string{"peb", "delete", "peb-nonexistent"})
+	err := app.Run([]string{"peb", "delete", "peb-nonexistent"})
 	if err == nil {
 		t.Error("expected error for non-existent peb, got nil")
 	}
@@ -196,21 +172,13 @@ func TestDeleteCommandNoArgs(t *testing.T) {
 	pebblesDir, _, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	app := &cli.App{
 		Commands: []*cli.Command{DeleteCommand()},
 	}
 
-	err = app.Run([]string{"peb", "delete"})
+	err := app.Run([]string{"peb", "delete"})
 	if err == nil {
 		t.Error("expected error for missing peb ID, got nil")
 	}
@@ -224,15 +192,7 @@ func TestDeleteCommandWithDependentPebsNotBeingDeleted(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	blockingID, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -283,15 +243,7 @@ func TestDeleteCommandWithDependentPebsBeingDeleted(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	blockingID, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -361,15 +313,7 @@ func TestDeleteCommandPartialFailure(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	id1, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
@@ -407,15 +351,7 @@ func TestDeleteCommandWithSomeDependantsNotBeingDeleted(t *testing.T) {
 	pebblesDir, s, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	origWd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(origWd)
-
-	if err := os.Chdir(pebblesDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(pebblesDir)
 
 	blockingID, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {

@@ -61,9 +61,7 @@ func TestUpdateCommandStatus(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -114,9 +112,7 @@ func TestUpdateCommandTitle(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -170,9 +166,7 @@ func TestUpdateCommandContent(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -216,9 +210,7 @@ func TestUpdateCommandType(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -271,9 +263,7 @@ func TestUpdateCommandBlockedBy(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -329,9 +319,7 @@ func TestUpdateCommandClearBlockedBy(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -375,9 +363,7 @@ func TestUpdateCommandInvalidBlockedBy(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -420,9 +406,7 @@ func TestUpdateCommandCycleDetection(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id1, string(inputJSON)})
 
@@ -436,11 +420,8 @@ func TestUpdateCommandCycleDetection(t *testing.T) {
 }
 
 func TestUpdateCommandMissingID(t *testing.T) {
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-
 	tmpDir := t.TempDir()
-	os.Chdir(tmpDir)
+	t.Chdir(tmpDir)
 
 	pebblesDir := filepath.Join(tmpDir, ".pebbles")
 	if err := os.Mkdir(pebblesDir, 0755); err != nil {
@@ -467,11 +448,8 @@ id_length = 4
 }
 
 func TestUpdateCommandPebNotFound(t *testing.T) {
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-
 	tmpDir := t.TempDir()
-	os.Chdir(tmpDir)
+	t.Chdir(tmpDir)
 
 	pebblesDir := filepath.Join(tmpDir, ".pebbles")
 	if err := os.Mkdir(pebblesDir, 0755); err != nil {
@@ -535,9 +513,7 @@ func TestUpdateCommandFromStdin(t *testing.T) {
 		r.Close()
 	}()
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 
@@ -582,9 +558,7 @@ func TestUpdateCommandMultipleFields(t *testing.T) {
 
 	inputJSON, _ := json.Marshal(update)
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(pebblesDir)
+	t.Chdir(pebblesDir)
 
 	output := runCommand([]string{"update", id, string(inputJSON)})
 

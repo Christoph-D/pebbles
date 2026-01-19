@@ -11,15 +11,7 @@ import (
 
 func TestInitCommand(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(tmpDir)
 
 	pebblesDir := ".pebbles"
 	if _, err := os.Stat(pebblesDir); err == nil {
@@ -65,15 +57,7 @@ id_length = 4
 
 func TestInitCommandAlreadyExists(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(tmpDir)
 
 	pebblesDir := filepath.Join(tmpDir, ".pebbles")
 	if err := os.Mkdir(pebblesDir, 0755); err != nil {
@@ -91,15 +75,7 @@ func TestInitCommandAlreadyExists(t *testing.T) {
 
 func TestInitCommandIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(tmpDir)
 
 	pebblesDir := ".pebbles"
 	configPath := filepath.Join(pebblesDir, "config.toml")
@@ -112,7 +88,7 @@ func TestInitCommandIdempotent(t *testing.T) {
 	oldStdout := os.Stdout
 	os.Stdout = w
 
-	err = app.Run([]string{"peb", "init"})
+	err := app.Run([]string{"peb", "init"})
 	if err != nil {
 		w.Close()
 		os.Stdout = oldStdout
@@ -161,15 +137,7 @@ func TestInitCommandIdempotent(t *testing.T) {
 
 func TestInitCommandWithOpencode(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(tmpDir)
 
 	app := &cli.App{
 		Commands: []*cli.Command{InitCommand()},
@@ -179,7 +147,7 @@ func TestInitCommandWithOpencode(t *testing.T) {
 	oldStdout := os.Stdout
 	os.Stdout = w
 
-	err = app.Run([]string{"peb", "init", "--opencode"})
+	err := app.Run([]string{"peb", "init", "--opencode"})
 	if err != nil {
 		w.Close()
 		os.Stdout = oldStdout
@@ -216,15 +184,7 @@ func TestInitCommandWithOpencode(t *testing.T) {
 
 func TestInitCommandWithOpencodeIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(tmpDir)
 
 	pluginPath := filepath.Join(".opencode", "plugin", "pebbles.ts")
 
@@ -236,7 +196,7 @@ func TestInitCommandWithOpencodeIdempotent(t *testing.T) {
 	oldStdout := os.Stdout
 	os.Stdout = w
 
-	err = app.Run([]string{"peb", "init", "--opencode"})
+	err := app.Run([]string{"peb", "init", "--opencode"})
 	if err != nil {
 		w.Close()
 		os.Stdout = oldStdout
