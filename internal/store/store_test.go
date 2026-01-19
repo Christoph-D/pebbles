@@ -485,3 +485,55 @@ func TestSaveCleansBlockedBy(t *testing.T) {
 		t.Errorf("expected blocked-by %s, got %s", blockingID, savedPeb.BlockedBy[0])
 	}
 }
+
+func TestGetCleansBlockedBy(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "peb")
+	if err := s.Load(); err != nil {
+		t.Fatal(err)
+	}
+
+	blockingID1, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockingPeb1 := peb.New(blockingID1, "Blocking peb 1", peb.TypeTask, peb.StatusNew, "Blocks another")
+	if err := s.Save(blockingPeb1); err != nil {
+		t.Fatal(err)
+	}
+
+	blockingID2, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockingPeb2 := peb.New(blockingID2, "Blocking peb 2", peb.TypeTask, peb.StatusNew, "Blocks another")
+	if err := s.Save(blockingPeb2); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := peb.New(id, "Test peb", peb.TypeTask, peb.StatusNew, "Content")
+	p.BlockedBy = []string{blockingID1, blockingID2}
+	if err := s.Save(p); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.Delete(blockingPeb1); err != nil {
+		t.Fatal(err)
+	}
+
+	delete(s.cache, id)
+	gotPeb, ok := s.Get(id)
+	if !ok {
+		t.Fatal("expected peb to be found")
+	}
+	if len(gotPeb.BlockedBy) != 1 {
+		t.Errorf("expected 1 blocked-by after get, got %d", len(gotPeb.BlockedBy))
+	}
+	if gotPeb.BlockedBy[0] != blockingID2 {
+		t.Errorf("expected blocked-by %s, got %s", blockingID2, gotPeb.BlockedBy[0])
+	}
+}

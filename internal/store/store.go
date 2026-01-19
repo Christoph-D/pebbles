@@ -68,6 +68,14 @@ func (s *Store) Get(id string) (*peb.Peb, bool) {
 		return nil, false
 	}
 
+	filtered := make([]string, 0, len(p.BlockedBy))
+	for _, bid := range p.BlockedBy {
+		if s.Exists(bid) {
+			filtered = append(filtered, bid)
+		}
+	}
+	p.BlockedBy = filtered
+
 	s.cache[id] = p
 	return p, true
 }
