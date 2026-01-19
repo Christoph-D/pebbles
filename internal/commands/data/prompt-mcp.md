@@ -52,6 +52,10 @@ Terminology:
 2. Use `peb_update` to update the peb's content if requirements change
 3. Use `peb_update` to mark as `fixed` when completed
 
+**Destructive operations:**
+
+- **DO NOT use `peb_delete`** unless the user explicitly asks for it. This command permanently deletes pebs and their data cannot be recovered. Always confirm with the user before using this command.
+
 **Tracking dependencies:**
 
 - Use `blocked_by` in `peb_new` when work depends on another peb

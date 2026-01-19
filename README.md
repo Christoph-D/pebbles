@@ -154,6 +154,15 @@ peb query status:new type:bug          # New bugs only
 peb query --fields id,title status:new # Output specific fields
 ```
 
+#### `peb delete <id> [<id> ...]`
+Delete one or more tasks by ID (permanently removes them)
+```bash
+peb delete peb-ab12
+peb delete peb-ab12 peb-cd34 peb-ef56
+```
+
+**Note:** A peb with dependants can only be deleted if all of its dependants are also being deleted in the same command.
+
 #### `peb prime [--mcp]`
 Output agent instructions. With `--mcp` flag, outputs instructions formatted for MCP server integration.
 

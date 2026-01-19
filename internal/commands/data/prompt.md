@@ -73,6 +73,19 @@ peb update {{.PebbleIDPattern}} '{"title":"New title"}'
 peb update {{.PebbleIDPattern}} '{"blocked-by":["{{.PebbleIDPattern2}}","{{.PebbleIDPattern3}}"]}'
 ```
 
+### Delete pebs
+
+```bash
+peb delete {{.PebbleIDPattern}}
+peb delete {{.PebbleIDPattern}} {{.PebbleIDPattern2}} {{.PebbleIDPattern3}}
+```
+
+**⚠️ CRITICAL WARNING: THIS COMMAND DELETES DATA**
+
+**DO NOT run `peb delete` unless the user explicitly asks for it.** This command permanently deletes pebs and their data cannot be recovered.
+
+Always confirm with the user before running this command.
+
 ### Query pebs
 
 ```bash
