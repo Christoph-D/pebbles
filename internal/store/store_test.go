@@ -440,3 +440,48 @@ func TestGenerateUniqueIDFailure(t *testing.T) {
 	}
 	t.Error("expected error when ID space is exhausted")
 }
+
+func TestSaveCleansBlockedBy(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "peb")
+	if err := s.Load(); err != nil {
+		t.Fatal(err)
+	}
+
+	blockingID, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockingPeb := peb.New(blockingID, "Blocking peb", peb.TypeTask, peb.StatusNew, "Blocks another")
+	if err := s.Save(blockingPeb); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := peb.New(id, "Test peb", peb.TypeTask, peb.StatusNew, "Content")
+	p.BlockedBy = []string{blockingID, "peb-nonexistent"}
+
+	originalBlockedBy := p.BlockedBy
+	if err := s.Save(p); err != nil {
+		t.Fatalf("Save() failed: %v", err)
+	}
+
+	if len(p.BlockedBy) != len(originalBlockedBy) {
+		t.Errorf("argument was modified: original had %d blocked-by, now has %d",
+			len(originalBlockedBy), len(p.BlockedBy))
+	}
+
+	savedPeb, ok := s.Get(id)
+	if !ok {
+		t.Fatal("peb not found after save")
+	}
+	if len(savedPeb.BlockedBy) != 1 {
+		t.Errorf("expected 1 blocked-by after cleaning, got %d", len(savedPeb.BlockedBy))
+	}
+	if savedPeb.BlockedBy[0] != blockingID {
+		t.Errorf("expected blocked-by %s, got %s", blockingID, savedPeb.BlockedBy[0])
+	}
+}

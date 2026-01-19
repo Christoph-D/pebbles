@@ -73,11 +73,20 @@ func (s *Store) Get(id string) (*peb.Peb, bool) {
 }
 
 func (s *Store) Save(p *peb.Peb) error {
-	if err := peb.WriteFile(s.dir, p); err != nil {
+	cleaned := *p
+	filtered := make([]string, 0, len(p.BlockedBy))
+	for _, id := range p.BlockedBy {
+		if s.Exists(id) {
+			filtered = append(filtered, id)
+		}
+	}
+	cleaned.BlockedBy = filtered
+
+	if err := peb.WriteFile(s.dir, &cleaned); err != nil {
 		return fmt.Errorf("failed to save peb: %w", err)
 	}
-	s.cache[p.ID] = p
-	s.filenames[p.ID] = peb.Filename(p)
+	s.cache[cleaned.ID] = &cleaned
+	s.filenames[cleaned.ID] = peb.Filename(&cleaned)
 	return nil
 }
 

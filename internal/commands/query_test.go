@@ -326,12 +326,21 @@ func TestQueryCommandFields(t *testing.T) {
 
 	t.Chdir(pebblesDir)
 
+	blockerID, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blocker := peb.New(blockerID, "Blocker peb", peb.TypeBug, peb.StatusFixed, "Blocker content")
+	if err := s.Save(blocker); err != nil {
+		t.Fatal(err)
+	}
+
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := peb.New(id, "Test peb", peb.TypeBug, peb.StatusInProgress, "Test content")
-	p.BlockedBy = []string{"peb-blocker"}
+	p.BlockedBy = []string{blockerID}
 	if err := s.Save(p); err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +425,7 @@ func TestQueryCommandFields(t *testing.T) {
 						t.Errorf("missing expected field %s", wantField)
 					}
 				case "blocked-by":
-					if result.BlockedBy == nil {
+					if len(result.BlockedBy) == 0 {
 						t.Errorf("missing expected field %s", wantField)
 					}
 				}
@@ -586,12 +595,21 @@ func TestQueryCommandFieldOrderingWithBlockedBy(t *testing.T) {
 
 	t.Chdir(pebblesDir)
 
+	blockerID, err := s.GenerateUniqueID("peb", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blocker := peb.New(blockerID, "Blocker peb", peb.TypeBug, peb.StatusFixed, "Blocker content")
+	if err := s.Save(blocker); err != nil {
+		t.Fatal(err)
+	}
+
 	id, err := s.GenerateUniqueID("peb", 4)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := peb.New(id, "Test peb with blocker", peb.TypeTask, peb.StatusNew, "Test content")
-	p.BlockedBy = []string{"peb-xxxx"}
+	p.BlockedBy = []string{blockerID}
 	if err := s.Save(p); err != nil {
 		t.Fatal(err)
 	}
@@ -604,7 +622,7 @@ func TestQueryCommandFieldOrderingWithBlockedBy(t *testing.T) {
 	oldStdout := os.Stdout
 	os.Stdout = w
 
-	err = app.Run([]string{"peb", "query"})
+	err = app.Run([]string{"peb", "query", "id:" + id})
 	w.Close()
 	os.Stdout = oldStdout
 
@@ -618,7 +636,7 @@ func TestQueryCommandFieldOrderingWithBlockedBy(t *testing.T) {
 		output = scanner.Text()
 	}
 
-	expected := `{"id":"` + id + `","type":"task","status":"new","title":"Test peb with blocker","blocked-by":["peb-xxxx"]}`
+	expected := `{"id":"` + id + `","type":"task","status":"new","title":"Test peb with blocker","blocked-by":["` + blockerID + `"]}`
 	if output != expected {
 		t.Errorf("expected output:\n%s\ngot:\n%s", expected, output)
 	}
