@@ -7,7 +7,7 @@ import (
 )
 
 var ErrCycle = errors.New("cycle detected in blocked-by relationships")
-var ErrInvalidReference = errors.New("referenced pebble(s) not found")
+var ErrInvalidReference = errors.New("referenced peb(s) not found")
 
 func IsInvalidReference(err error) bool {
 	return err != nil && err.Error() == ErrInvalidReference.Error()

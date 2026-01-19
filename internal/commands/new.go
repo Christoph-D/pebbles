@@ -71,7 +71,7 @@ Examples:
 			if len(input.BlockedBy) > 0 {
 				if err := peb.ValidateBlockedBy(s, nil, input.BlockedBy); err != nil {
 					if peb.IsInvalidReference(err) {
-						return fmt.Errorf("Referenced pebble(s) not found: %s", extractInvalidID(err))
+						return fmt.Errorf("Referenced peb(s) not found: %s", extractInvalidID(err))
 					}
 					return err
 				}
@@ -94,7 +94,7 @@ Examples:
 				return fmt.Errorf("failed to save peb: %w", err)
 			}
 
-			fmt.Printf("Created new pebble %s\n", id)
+			fmt.Printf("Created new peb %s\n", id)
 			return nil
 		},
 	}

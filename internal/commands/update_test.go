@@ -371,7 +371,7 @@ func TestUpdateCommandInvalidBlockedBy(t *testing.T) {
 		t.Error("expected error for invalid blocked-by reference")
 	}
 
-	if !strings.Contains(output, "referenced pebble(s) not found") {
+	if !strings.Contains(output, "referenced peb(s) not found") {
 		t.Errorf("expected invalid reference error, got: %s", output)
 	}
 }

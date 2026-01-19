@@ -228,14 +228,9 @@ func TestNewCommandOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	filename := peb.Filename(p)
-
-	expectedOutput := "Created new pebble " + id + " in .pebbles/" + filename
+	expectedOutput := "Created new peb " + id
 
 	if !strings.Contains(expectedOutput, id) {
 		t.Errorf("expected output to contain ID %s", id)
-	}
-	if !strings.Contains(expectedOutput, filename) {
-		t.Errorf("expected output to contain filename %s", filename)
 	}
 }

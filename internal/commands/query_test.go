@@ -377,6 +377,7 @@ func TestQueryCommandFields(t *testing.T) {
 			if tt.fields != "" {
 				args = append(args, "--fields="+tt.fields)
 			}
+			args = append(args, "id:"+id)
 
 			r, w, _ := os.Pipe()
 			oldStdout := os.Stdout
