@@ -2,9 +2,9 @@
 id: peb-99nn
 title: Update new command to support blocking
 type: task
-status: new
+status: wont-fix
 created: "2026-01-19T22:07:59+01:00"
-changed: "2026-01-19T22:09:23+01:00"
+changed: "2026-01-19T22:25:06+01:00"
 ---
 Update `internal/commands/new.go` to support the `blocking` field.
 

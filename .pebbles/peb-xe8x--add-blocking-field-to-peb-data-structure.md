@@ -2,9 +2,9 @@
 id: peb-xe8x
 title: Add Blocking field to Peb data structure
 type: epic
-status: new
+status: wont-fix
 created: "2026-01-19T22:07:15+01:00"
-changed: "2026-01-19T22:14:40+01:00"
+changed: "2026-01-19T22:25:04+01:00"
 blocked-by:
     - peb-0fqz
     - peb-7epm
@@ -36,3 +36,21 @@ Subtasks:
 - Update validation and cycle detection
 - Update MCP tools and documentation
 - Add comprehensive test coverage
+
+---
+
+## Decision: Won't Fix
+
+**Reason:** The persisted `blocking` field approach introduces significant complexity without proportional benefit.
+
+### Problems with persisted approach:
+1. **Data redundancy & integrity risk** - Storing the same relationship in two places creates risk of inconsistency if peb files are manually edited or corrupted
+2. **Increased complexity** - Every command that modifies relationships (new, update, delete) must update multiple files atomically
+3. **No atomic file operations** - Go/filesystem doesn't provide atomic multi-file writes; a crash mid-operation could leave data inconsistent
+4. **Performance overhead** - Every write operation potentially requires loading and saving multiple pebs
+
+### Alternative considered:
+Computing `blocking` dynamically at read time was considered, but rejected because it requires loading every peb file to build the reverse lookup, making `peb_read` O(n) instead of O(k).
+
+### Conclusion:
+The current `blocked-by` field is sufficient. The `blocking` relationship can be derived when needed (e.g., `peb_query` with `blocked-by:peb-id` filter, or the existing `buildDependencyMap` logic in delete.go). The complexity of maintaining bidirectional persisted relationships outweighs the convenience benefit.

@@ -2,9 +2,9 @@
 id: peb-3vzy
 title: Update delete command to clean up relationships
 type: task
-status: new
+status: wont-fix
 created: "2026-01-19T22:07:59+01:00"
-changed: "2026-01-19T22:09:23+01:00"
+changed: "2026-01-19T22:25:08+01:00"
 ---
 Update `internal/commands/delete.go` to clean up relationships before deletion.
 

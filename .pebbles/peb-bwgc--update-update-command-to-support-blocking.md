@@ -2,9 +2,9 @@
 id: peb-bwgc
 title: Update update command to support blocking
 type: task
-status: new
+status: wont-fix
 created: "2026-01-19T22:07:59+01:00"
-changed: "2026-01-19T22:09:23+01:00"
+changed: "2026-01-19T22:25:07+01:00"
 ---
 Update `internal/commands/update.go` to support the `blocking` field.
 

@@ -2,9 +2,9 @@
 id: peb-4zns
 title: Update MCP tools and documentation
 type: task
-status: new
+status: wont-fix
 created: "2026-01-19T22:07:59+01:00"
-changed: "2026-01-19T22:09:23+01:00"
+changed: "2026-01-19T22:25:10+01:00"
 ---
 Update MCP tools and documentation files.
 
