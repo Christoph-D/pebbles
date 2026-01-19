@@ -8,7 +8,7 @@ tasks, bugs, features, and epics.
 **ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
 
 Before doing ANY non-trivial task, bug fix, feature, or code change:
-1. Create a peb to track it (for complex work, create an epic blocked by subtasks)
+1. Create a peb with your plan (for complex work, create an epic blocked by subtasks with more details)
 2. Update its status as you work
 3. Mark it as fixed when complete
 
@@ -171,3 +171,52 @@ peb update {{.PebbleIDPattern}} '{"status":"in-progress"}'
 # 5. Mark as fixed
 peb update {{.PebbleIDPattern}} '{"status":"fixed"}'
 ```
+
+## Writing Good Descriptions
+
+**Good Task/Bug/Feature Descriptions:**
+
+- Be specific and actionable - describe what needs to be done
+- Include context - why is this task needed?
+- Add acceptance criteria - how will you know it's complete?
+- Reference relevant files, code locations, or issues
+- Include examples or expected behavior where helpful
+- Keep it concise but complete - enough info for another agent to execute
+
+Example task content:
+```
+Implement user authentication with JWT tokens.
+
+Requirements:
+- Login endpoint that accepts username/password
+- Returns JWT token valid for 24 hours
+- Token validation middleware for protected routes
+- Handle expired tokens gracefully
+
+Files to modify:
+- internal/auth/login.go
+- internal/middleware/auth.go
+```
+
+**Good Epic Descriptions:**
+
+- Focus on the "what" and "why" - the overall goal
+- Break down into clear, testable components
+- Link to related tasks using `blocked-by`
+- Include success criteria for the epic
+- Estimate scope and dependencies
+
+Example epic content:
+```
+Implement OAuth2 authentication system for third-party providers.
+
+Success criteria:
+- Users can authenticate via GitHub
+- Token refresh works automatically
+- User profiles are created/linked correctly
+```
+
+This epic could be blocked by:
+- {{.PebbleIDPattern}}: OAuth2 flow for GitHub
+- {{.PebbleIDPattern2}}: Token refresh mechanism
+- {{.PebbleIDPattern3}}: Profile linking logic
