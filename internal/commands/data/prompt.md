@@ -8,7 +8,7 @@ tasks, bugs, features, and epics.
 **ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
 
 Before doing ANY non-trivial task, bug fix, feature, or code change:
-1. Create a peb to track it (for complex work, create an epic with subtasks)
+1. Create a peb to track it (for complex work, create an epic blocked by subtasks)
 2. Update its status as you work
 3. Mark it as fixed when complete
 
@@ -21,7 +21,7 @@ Trivial work (simple, single-step tasks that can be completed in < 3 minutes) ca
 3. Update peb status throughout the lifecycle
 4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
 5. Use `blocked-by` to establish clear dependencies between related work
-6. For complex work, create an `epic` peb that blocks smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
+6. For complex work, create an `epic` peb blocked by smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
 
 ## Core Concepts
 
