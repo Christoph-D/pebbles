@@ -136,6 +136,26 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
           return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
         },
       }),
+      peb_delete: tool({
+        description: "Delete pebs by ID.",
+        args: {
+          id: tool.schema.array(tool.schema.string()).describe("Array of peb IDs to delete (e.g., ['peb-xxxx', 'peb-yyyy'])"),
+        },
+        async execute(args) {
+          const proc = spawn(['peb', 'delete', ...args.id], {
+            stdout: 'pipe',
+            stderr: 'pipe',
+          });
+          const [stdout, stderr] = await Promise.all([
+            new Response(proc.stdout).text(),
+            new Response(proc.stderr).text(),
+          ]);
+          await proc.exited;
+          const result = stdout.trim();
+          const errorOutput = stderr.trim();
+          return errorOutput ? `${result}\n$Error: {errorOutput}` : result;
+        },
+      }),
     },
   };
 };

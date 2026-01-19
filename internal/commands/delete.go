@@ -10,16 +10,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func buildDependencyMap(allPebs []*peb.Peb) map[string][]string {
-	depMap := make(map[string][]string)
-	for _, p := range allPebs {
-		for _, blockedBy := range p.BlockedBy {
-			depMap[blockedBy] = append(depMap[blockedBy], p.ID)
-		}
-	}
-	return depMap
-}
-
 func DeleteCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "delete",
@@ -28,9 +18,6 @@ func DeleteCommand() *cli.Command {
 
 This command permanently removes peb files from storage. The deleted pebs
 cannot be recovered.
-
-A peb with dependants can only be deleted if all of its dependants are
-also being deleted in the same command.
 
 Examples:
   peb delete peb-xxxx
@@ -55,28 +42,6 @@ Examples:
 			for _, pebID := range pebIDs {
 				if _, ok := s.Get(pebID); !ok {
 					return fmt.Errorf("peb %s not found", pebID)
-				}
-			}
-
-			allPebs := s.All()
-			depMap := buildDependencyMap(allPebs)
-
-			pebIDSet := make(map[string]bool)
-			for _, pebID := range pebIDs {
-				pebIDSet[pebID] = true
-			}
-
-			for _, pebID := range pebIDs {
-				if dependents, exists := depMap[pebID]; exists && len(dependents) > 0 {
-					var notBeingDeleted []string
-					for _, depID := range dependents {
-						if !pebIDSet[depID] {
-							notBeingDeleted = append(notBeingDeleted, depID)
-						}
-					}
-					if len(notBeingDeleted) > 0 {
-						return fmt.Errorf("cannot delete %s: referenced by blocked-by in peb(s) not being deleted: %s", pebID, strings.Join(notBeingDeleted, ", "))
-					}
 				}
 			}
 

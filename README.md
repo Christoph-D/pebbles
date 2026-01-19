@@ -161,8 +161,6 @@ peb delete peb-ab12
 peb delete peb-ab12 peb-cd34 peb-ef56
 ```
 
-**Note:** A peb with dependants can only be deleted if all of its dependants are also being deleted in the same command.
-
 #### `peb prime [--mcp]`
 Output agent instructions. With `--mcp` flag, outputs instructions formatted for MCP server integration.
 
