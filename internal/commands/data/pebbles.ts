@@ -1,3 +1,9 @@
+// Version {{.Version}}
+//
+// IMPORTANT: **This file in .opencode/plugin/ is auto-generated**
+//
+// Changes to this file will be overwritten when you run `peb`.
+// If this file is not located in .opencode/plugin/, it's safe to modify.
 import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import { spawn } from "bun";

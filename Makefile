@@ -1,14 +1,17 @@
-.PHONY: build test clean install fmt vet help
+.PHONY: build test clean install fmt vet generate help
 
 BINARY_NAME=peb
 BUILD_DIR=bin
 CMD_DIR=cmd/peb
 
 # Default target
-build:
+build: generate
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
+
+generate:
+	go generate ./...
 
 test:
 	@echo "Running tests..."
@@ -24,7 +27,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -f coverage.out coverage.html
 
-install:
+install: generate
 	@echo "Installing $(BINARY_NAME)..."
 	go install ./$(CMD_DIR)
 
@@ -53,6 +56,7 @@ help:
 	@echo "  install        - Install the binary to GOPATH/bin"
 	@echo "  fmt            - Format code"
 	@echo "  vet            - Run go vet"
+	@echo "  generate       - Run go generate"
 	@echo "  mod-tidy       - Tidy go.mod"
 	@echo "  deps           - Download dependencies"
 	@echo "  help           - Show this help message"
