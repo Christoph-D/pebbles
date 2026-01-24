@@ -7,7 +7,7 @@ You are working with "peb" (Pebbles), an agent-first tool for tracking tasks, bu
 **ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
 
 Before doing ANY non-trivial task, bug fix, feature, or code change:
-1. Create a peb to track it (for complex work, create an epic blocked by subtasks)
+1. Create a peb to track it (for complex work, create multiple subtasks followed by an overall epic blocked by all the subtasks)
 2. Update its status as you work
 3. Mark it as fixed when complete
 
@@ -20,7 +20,7 @@ Trivial work (simple, single-step tasks that can be completed in < 3 minutes) ca
 3. Update peb status throughout the lifecycle
 4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
 5. Use `blocked-by` to establish clear dependencies between related work
-6. For complex work, create an `epic` peb blocked by smaller task pebs (epic remains `in-progress` until all tasks are `fixed`)
+6. For complex work, break it down into smaller task pebs and create an `epic` peb blocked by all the task pebs (epic remains `in-progress` until all tasks are `fixed`)
 
 ## Core Concepts
 
@@ -31,7 +31,7 @@ Trivial work (simple, single-step tasks that can be completed in < 3 minutes) ca
 - `type`: One of: `bug`, `feature`, `epic`, `task`
 - `status`: One of: `new`, `in-progress`, `fixed`, `wont-fix`
 - `created`/`changed`: timestamps
-- `blocked-by`: List of peb IDs that block this peb (dependency tracking)
+- `blocked-by`: List of peb IDs that must be fixed before this peb can be marked as fixed (dependencies/subtasks)
 - `content`: Markdown description
 
 Terminology:
@@ -56,13 +56,16 @@ Terminology:
 
 - **DO NOT use `peb_delete`** unless the user explicitly asks for it. This command permanently deletes pebs and their data cannot be recovered. Always confirm with the user before using this command.
 
-**Tracking dependencies:**
+**Tracking dependencies with blocked-by:**
 
-- Use `blocked_by` in `peb_new` when work depends on another peb
+The `blocked-by` field establishes dependencies between pebs:
+- Setting {{.PebbleIDPattern}} as blocked-by {{.PebbleIDPattern2}} means {{.PebbleIDPattern2}} is a prerequisite or subtask of {{.PebbleIDPattern}}
+- {{.PebbleIDPattern}} cannot be marked as `fixed` until all pebs in its `blocked-by` list are also `fixed`
 - Use `peb_read` to find a peb's dependencies (must be completed before this peb can be marked as fixed)
-- Use `peb_query` with `filters: ["blocked-by:<id>"]` to find pebs blocked by a specific task
+  - Use `peb_query` with `filters: ["id:(<id>|...)"]` to get all the titles of the dependencies
+  - Use `peb_read` to get their full details
 
-## Example Workflow
+## Example: Bug Fix without Dependencies
 
 ```
 # 1. Find a bug to work on
@@ -86,6 +89,18 @@ Call peb_update with:
 - data: '{"status":"fixed"}'
 ```
 
+## Example: Creating an Epic
+
+When tracking complex work that requires multiple tasks, create an epic:
+
+1. First, create all the subtask pebs:
+   - Call `peb_new` for each subtask with type `task` or `feature`
+   - Leave `blocked-by` empty
+
+2. Create the epic peb that tracks the overall goal:
+   - Call `peb_new` with type `epic`
+   - Set `blocked-by` to list all the subtask peb IDs
+
 ## Writing Good Descriptions
 
 **Good Task/Bug/Feature Descriptions:**
@@ -97,40 +112,9 @@ Call peb_update with:
 - Include examples or expected behavior where helpful
 - Keep it concise but complete - enough info for another agent to execute
 
-Example task content:
-```
-Implement user authentication with JWT tokens.
-
-Requirements:
-- Login endpoint that accepts username/password
-- Returns JWT token valid for 24 hours
-- Token validation middleware for protected routes
-- Handle expired tokens gracefully
-
-Files to modify:
-- internal/auth/login.go
-- internal/middleware/auth.go
-```
-
 **Good Epic Descriptions:**
 
 - Focus on the "what" and "why" - the overall goal
 - Break down into clear, testable components
 - Link to related tasks using `blocked-by`
 - Include success criteria for the epic
-- Estimate scope and dependencies
-
-Example epic content:
-```
-Implement OAuth2 authentication system for third-party providers.
-
-Success criteria:
-- Users can authenticate via GitHub
-- Token refresh works automatically
-- User profiles are created/linked correctly
-```
-
-This epic could be blocked by:
-- {{.PebbleIDPattern}}: OAuth2 flow for GitHub
-- {{.PebbleIDPattern2}}: Token refresh mechanism
-- {{.PebbleIDPattern3}}: Profile linking logic
