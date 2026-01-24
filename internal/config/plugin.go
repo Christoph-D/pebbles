@@ -56,12 +56,7 @@ func readInstalledPluginVersion(cfg *Config) (string, error) {
 	return strings.TrimSpace(version), nil
 }
 
-func MaybeUpdatePlugin() error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-
+func MaybeUpdatePlugin(cfg *Config) error {
 	installedVersion, err := readInstalledPluginVersion(cfg)
 	if err != nil {
 		return nil

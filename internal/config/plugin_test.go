@@ -248,14 +248,14 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err := MaybeUpdatePlugin()
-		if err != nil {
-			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
-		}
-
 		cfg, err := Load()
 		if err != nil {
 			t.Fatalf("Load() error = %v", err)
+		}
+
+		err = MaybeUpdatePlugin(cfg)
+		if err != nil {
+			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}
 		pluginFile := filepath.Join(pluginPath(cfg), pluginFilename)
 		if _, err := os.Stat(pluginFile); !os.IsNotExist(err) {
@@ -297,7 +297,7 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err = MaybeUpdatePlugin()
+		err = MaybeUpdatePlugin(cfg)
 		if err != nil {
 			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}
@@ -347,7 +347,7 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err = MaybeUpdatePlugin()
+		err = MaybeUpdatePlugin(cfg)
 		if err != nil {
 			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}

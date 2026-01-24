@@ -37,7 +37,7 @@ func InitCommand() *cli.Command {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 
-			if err := config.MaybeUpdatePlugin(); err != nil {
+			if err := config.MaybeUpdatePlugin(cfg); err != nil {
 				return fmt.Errorf("failed to update plugin: %w", err)
 			}
 
