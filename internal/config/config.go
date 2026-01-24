@@ -19,7 +19,7 @@ type Config struct {
 const DefaultPrefix = "peb"
 const DefaultIDLength = 4
 
-var ErrNoPebblesDir = errors.New("no .pebbles directory found")
+var ErrNoPebblesDir = errors.New("no .pebbles directory found (did you run 'peb init'?)")
 
 func Load() (*Config, error) {
 	dir, err := findPebblesDir()
