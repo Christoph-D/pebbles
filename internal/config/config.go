@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Prefix     string `toml:"prefix"`
 	IDLength   int    `toml:"id_length"`
+	projectDir string
 	pebblesDir string
 }
 
@@ -29,6 +30,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg.projectDir = filepath.Dir(dir)
 	cfg.pebblesDir = dir
 	return cfg, nil
 }

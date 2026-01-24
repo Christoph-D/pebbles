@@ -32,12 +32,17 @@ func InitCommand() *cli.Command {
 				fmt.Println("Initialized pebbles in .pebbles/")
 			}
 
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+
 			if err := config.MaybeUpdatePlugin(); err != nil {
 				return fmt.Errorf("failed to update plugin: %w", err)
 			}
 
 			if c.Bool("opencode") {
-				if err := config.InstallOpencodePlugin(); err != nil {
+				if err := config.InstallOpencodePlugin(cfg); err != nil {
 					return fmt.Errorf("failed to install opencode plugin: %w", err)
 				}
 				fmt.Println("Installed opencode MCP plugin")

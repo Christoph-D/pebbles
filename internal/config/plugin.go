@@ -30,13 +30,13 @@ func pebblesPluginVersion() string {
 	return timestamp + "-" + parts[1]
 }
 
-func pluginPath() string {
+func pluginPath(cfg *Config) string {
 	opencodeDir := ".opencode"
-	return filepath.Join(opencodeDir, "plugin")
+	return filepath.Join(cfg.projectDir, opencodeDir, "plugin")
 }
 
-func readInstalledPluginVersion() (string, error) {
-	pluginFile := filepath.Join(pluginPath(), pluginFilename)
+func readInstalledPluginVersion(cfg *Config) (string, error) {
+	pluginFile := filepath.Join(pluginPath(cfg), pluginFilename)
 	content, err := os.ReadFile(pluginFile)
 	if err != nil {
 		return "", err
@@ -57,7 +57,12 @@ func readInstalledPluginVersion() (string, error) {
 }
 
 func MaybeUpdatePlugin() error {
-	installedVersion, err := readInstalledPluginVersion()
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+
+	installedVersion, err := readInstalledPluginVersion(cfg)
 	if err != nil {
 		return nil
 	}
@@ -65,18 +70,13 @@ func MaybeUpdatePlugin() error {
 	currentVersion := pebblesPluginVersion()
 
 	if currentVersion > installedVersion {
-		return InstallOpencodePlugin()
+		return InstallOpencodePlugin(cfg)
 	}
 
 	return nil
 }
 
-func InstallOpencodePlugin() error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-
+func InstallOpencodePlugin(cfg *Config) error {
 	tmpl, err := template.New("pebblesPlugin").Parse(pebblesPlugin)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func InstallOpencodePlugin() error {
 		return err
 	}
 
-	pluginDir := pluginPath()
+	pluginDir := pluginPath(cfg)
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .opencode/plugin/ directory: %w", err)
 	}

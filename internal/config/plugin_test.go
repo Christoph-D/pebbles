@@ -8,8 +8,9 @@ import (
 )
 
 func TestPluginPath(t *testing.T) {
-	expected := filepath.Join(".opencode", "plugin")
-	if got := pluginPath(); got != expected {
+	cfg := &Config{projectDir: "/tmp/test"}
+	expected := filepath.Join("/tmp/test", ".opencode", "plugin")
+	if got := pluginPath(cfg); got != expected {
 		t.Errorf("pluginPath() = %v, want %v", got, expected)
 	}
 }
@@ -19,7 +20,8 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
 
-		pluginDir := pluginPath()
+		cfg := &Config{projectDir: tmpDir}
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -30,7 +32,7 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		version, err := readInstalledPluginVersion()
+		version, err := readInstalledPluginVersion(cfg)
 		if err != nil {
 			t.Fatalf("readInstalledPluginVersion() error = %v", err)
 		}
@@ -45,7 +47,8 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
 
-		pluginDir := pluginPath()
+		cfg := &Config{projectDir: tmpDir}
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -56,7 +59,7 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		version, err := readInstalledPluginVersion()
+		version, err := readInstalledPluginVersion(cfg)
 		if err != nil {
 			t.Fatalf("readInstalledPluginVersion() error = %v", err)
 		}
@@ -71,7 +74,8 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
 
-		_, err := readInstalledPluginVersion()
+		cfg := &Config{projectDir: tmpDir}
+		_, err := readInstalledPluginVersion(cfg)
 		if err == nil {
 			t.Fatal("readInstalledPluginVersion() expected error for missing file")
 		}
@@ -84,7 +88,8 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
 
-		pluginDir := pluginPath()
+		cfg := &Config{projectDir: tmpDir}
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -94,7 +99,7 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, err := readInstalledPluginVersion()
+		_, err := readInstalledPluginVersion(cfg)
 		if err == nil {
 			t.Fatal("readInstalledPluginVersion() expected error for empty file")
 		}
@@ -107,7 +112,8 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Chdir(tmpDir)
 
-		pluginDir := pluginPath()
+		cfg := &Config{projectDir: tmpDir}
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -118,7 +124,7 @@ func TestReadInstalledPluginVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, err := readInstalledPluginVersion()
+		_, err := readInstalledPluginVersion(cfg)
 		if err == nil {
 			t.Fatal("readInstalledPluginVersion() expected error for missing version comment")
 		}
@@ -147,12 +153,17 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err := InstallOpencodePlugin()
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+
+		err = InstallOpencodePlugin(cfg)
 		if err != nil {
 			t.Fatalf("InstallOpencodePlugin() error = %v", err)
 		}
 
-		pluginDir := pluginPath()
+		pluginDir := pluginPath(cfg)
 		pluginFile := filepath.Join(pluginDir, pluginFilename)
 
 		if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
@@ -186,20 +197,25 @@ id_length = 4
 		}
 
 		configContent := `# Pebbles configuration
-prefix = "task"
-id_length = 6
-`
+ prefix = "task"
+ id_length = 6
+ `
 		configPath := filepath.Join(pebblesDir, "config.toml")
 		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
-		err := InstallOpencodePlugin()
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+
+		err = InstallOpencodePlugin(cfg)
 		if err != nil {
 			t.Fatalf("InstallOpencodePlugin() error = %v", err)
 		}
 
-		pluginFile := filepath.Join(pluginPath(), pluginFilename)
+		pluginFile := filepath.Join(pluginPath(cfg), pluginFilename)
 		content, err := os.ReadFile(pluginFile)
 		if err != nil {
 			t.Fatalf("failed to read plugin file: %v", err)
@@ -211,15 +227,6 @@ id_length = 6
 		}
 	})
 
-	t.Run("no config directory", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		t.Chdir(tmpDir)
-
-		err := InstallOpencodePlugin()
-		if err == nil {
-			t.Fatal("InstallOpencodePlugin() expected error for missing .pebbles directory")
-		}
-	})
 }
 
 func TestMaybeUpdatePlugin(t *testing.T) {
@@ -246,7 +253,11 @@ id_length = 4
 			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}
 
-		pluginFile := filepath.Join(pluginPath(), pluginFilename)
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+		pluginFile := filepath.Join(pluginPath(cfg), pluginFilename)
 		if _, err := os.Stat(pluginFile); !os.IsNotExist(err) {
 			t.Error("plugin file should not be installed when it doesn't exist")
 		}
@@ -270,7 +281,12 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		pluginDir := pluginPath()
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -281,7 +297,7 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err := MaybeUpdatePlugin()
+		err = MaybeUpdatePlugin()
 		if err != nil {
 			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}
@@ -315,7 +331,12 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		pluginDir := pluginPath()
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+
+		pluginDir := pluginPath(cfg)
 		if err := os.MkdirAll(pluginDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -326,7 +347,7 @@ id_length = 4
 			t.Fatal(err)
 		}
 
-		err := MaybeUpdatePlugin()
+		err = MaybeUpdatePlugin()
 		if err != nil {
 			t.Fatalf("MaybeUpdatePlugin() error = %v", err)
 		}
