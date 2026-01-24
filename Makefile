@@ -13,11 +13,11 @@ build: generate
 generate:
 	go generate ./...
 
-test:
+test: generate
 	@echo "Running tests..."
 	go test ./...
 
-test-coverage:
+test-coverage: generate
 	@echo "Running tests with coverage..."
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
@@ -35,7 +35,7 @@ fmt:
 	@echo "Formatting code..."
 	go fmt ./...
 
-vet:
+vet: generate
 	@echo "Running go vet..."
 	go vet ./...
 
