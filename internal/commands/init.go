@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/Christoph-D/pebbles/internal/config"
 	"github.com/urfave/cli/v2"
@@ -50,6 +52,33 @@ func InitCommand() *cli.Command {
 }
 
 func installOpencodePlugin() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := template.New("pebblesPlugin").Parse(pebblesPlugin)
+	if err != nil {
+		return err
+	}
+
+	data := struct {
+		PebbleIDSuffix   string
+		PebbleIDPattern  string
+		PebbleIDPattern2 string
+		PebbleIDPattern3 string
+	}{
+		PebbleIDSuffix:   strings.Repeat("x", cfg.IDLength),
+		PebbleIDPattern:  cfg.Prefix + "-" + strings.Repeat("x", cfg.IDLength),
+		PebbleIDPattern2: cfg.Prefix + "-" + strings.Repeat("y", cfg.IDLength),
+		PebbleIDPattern3: cfg.Prefix + "-" + strings.Repeat("z", cfg.IDLength),
+	}
+
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return err
+	}
+
 	opencodeDir := ".opencode"
 	pluginDir := filepath.Join(opencodeDir, "plugin")
 
@@ -58,7 +87,7 @@ func installOpencodePlugin() error {
 	}
 
 	pluginPath := filepath.Join(pluginDir, "pebbles.ts")
-	if err := os.WriteFile(pluginPath, []byte(pebblesPlugin), 0644); err != nil {
+	if err := os.WriteFile(pluginPath, []byte(buf.String()), 0644); err != nil {
 		return fmt.Errorf("failed to write plugin file: %w", err)
 	}
 
