@@ -2,99 +2,77 @@
 
 [![CI](https://github.com/Christoph-D/pebbles/actions/workflows/test.yml/badge.svg)](https://github.com/Christoph-D/pebbles/actions/workflows/test.yml)
 
+**Pebbles** (`peb`) is a lightweight agent-first command-line task tracking tool
+optimized for [opencode](https://opencode.ai) but compatible with any coding
+agent that can execute shell commands.
 
-**Pebbles** (`peb`) is a lightweight agent-first command-line task tracking tool optimized for [opencode](https://opencode.ai) but compatible with any coding agent that can execute shell commands. It helps AI agents track tasks, bugs, features, and epics as they work on your codebase.
+It's a bit like [github.com/hmans/beans](https://github.com/hmans/beans) and
+[github.com/steveyegge/beads/](https://github.com/steveyegge/beads/) but much
+simpler, providing only the core features of a task tracker.
 
 ## Why Pebbles?
 
-When working with AI coding agents, you'll often have multiple tasks, bugs, and features being worked on simultaneously. Pebbles provides:
+When working with AI coding agents, you'll often have multiple tasks, bugs, and
+features being worked on simultaneously. Pebbles provides:
 
 - **Task tracking** - Create, read, update, and query tasks as JSON objects
 - **Dependency management** - Link related work with `blocked-by` relationships
-- **Status tracking** - Track progress through `new` → `in-progress` → `fixed` lifecycle
-- **File-based storage** - All tasks stored as individual markdown files in `.pebbles/` directory
+- **Status tracking** - Track progress through `new` → `in-progress` → `fixed`
+  lifecycle
+- **File-based storage** - All tasks stored as individual markdown files in
+  `.pebbles/` directory (minimizes merge conflicts)
+
+Pebbles is simple: It's less than 2k lines of code excluding tests and it has
+only a handful of commands.
 
 ## Quick Start
 
-### 1. Initialize Pebbles
+Install pebbles:
 
 ```bash
-peb init
+go install github.com/Christoph-D/pebbles/cmd/peb@latest
 ```
 
-This creates a `.pebbles/` directory with a config file.
-
-> **Important:** `peb init` and `peb cleanup` are the only commands designed for human use. All other commands (`peb new`, `peb read`, `peb update`, `peb query`, `peb prime`) are designed for AI agents and are not human-friendly. These commands use JSON input/output and are optimized for programmatic use.
-
-### 2. Create a New Task
+Then run in your project directory:
 
 ```bash
-echo '{"title":"Fix authentication bug","content":"Users cannot log in","type":"bug"}' | peb new
+peb init [--opencode]
 ```
 
-### 3. Query Tasks
-
-```bash
-# List all tasks
-peb query
-
-# Find new bugs
-peb query status:new type:bug
-```
-
-### 4. Read a Task
-
-```bash
-peb read peb-ab12
-```
-
-### 5. Update Status
-
-```bash
-peb update peb-ab12 '{"status":"in-progress"}'
-peb update peb-ab12 '{"status":"fixed"}'
-```
+This creates a `.pebbles/` directory with a config file, optionally with an
+opencode plugin. Edit the config file as needed.
 
 ## Opencode Integration
 
-To use pebbles with opencode, you need to add the pebbles plugin. This plugin provides:
-- **MCP Server** - Tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`) for direct agent integration
-- **Agent Instructions** - Automatically injected via `peb prime --mcp`
+If you use opencode, it's highly recommended to install the opencode plugin,
+which provides:
+
+- **Agent Instructions** to teach the agent how to use pebbles
+- **MCP Server** with tools for each peb command
 
 ### Setup
 
-Run `peb init --opencode` to automatically install the plugin to `.opencode/plugin/pebbles.ts`.
-
-For global installation (all projects), manually copy [the plugin file](.opencode/plugin/pebbles.ts) to `~/.opencode/plugin/pebbles.ts`.
+Run `peb init --opencode` to install the plugin to
+`.opencode/plugin/pebbles.ts`. This command does not override your main pebbles
+config if it already exists.
 
 ### Automatic Updates
 
-The plugin is automatically updated when running any `peb` command if a newer version is available. This ensures that the plugin stays in sync with the installed `peb` binary.
+The plugin file in the project directory is automatically updated when running
+any `peb` command if a newer version is available. This ensures that the plugin
+stays in sync with the installed `peb` binary.
 
-To disable the auto update of the opencode plugin, remove the "Version" string from the first line of `.opencode/plugin/pebbles.ts`.
-
-### How It Works
-
-The plugin:
-
-1. Injects the output of `peb prime --mcp` into the prompt
-2. Provides MCP tools (`peb_new`, `peb_read`, `peb_update`, `peb_query`)
+To disable the auto update of the opencode plugin, remove the "Version" string
+from the first line of `.opencode/plugin/pebbles.ts`.
 
 ## Using Pebbles with Coding Agents
 
 ### Opencode Agent Workflow
 
-With the plugin installed, opencode agents use peb automatically to track their work.
+With the plugin installed, opencode agents use peb automatically to track their
+work.
 
-### The Agent Workflow
-
-Opencode agents use peb automatically to track their work:
-
-1. **Before starting work** - Agent creates a peb with task details
-2. **While working** - Agent updates status to `in-progress`
-3. **After completion** - Agent marks peb as `fixed`
-
-### Example Session
+#### Example Session
 
 ```
 User: Add a user profile page
@@ -108,48 +86,61 @@ Agent: I'll create a task for this and start working on it.
 Task peb-xyz1 marked as fixed!
 ```
 
-**Note:** This automatic tracking only works when the pebbles plugin is installed.
-
 ### Other Coding Agents
 
-Pebbles can work with any coding agent that supports running shell commands. Show your agent the output of `peb prime` to teach it how to use pebbles.
+Pebbles works with any coding agent that supports running shell commands. Show
+your agent the output of `peb prime` to teach it how to use pebbles.
 
 ## Command Reference
 
 ### Human Commands
 
 #### `peb init [--opencode]`
-Initialize pebbles in current directory (creates `.pebbles/`). With `--opencode` flag, also installs the opencode MCP plugin (creates `.opencode/plugin/pebbles.ts`)
+
+Initialize pebbles in current directory (creates `.pebbles/`). With `--opencode`
+flag, also installs the opencode MCP plugin (creates
+`.opencode/plugin/pebbles.ts`)
 
 #### `peb cleanup`
-Delete all closed pebs (permanently removes pebs with status `fixed` or `wont-fix`). Open pebs (status `new` or `in-progress`) are preserved.
+
+Delete all closed pebs (permanently removes pebs with status `fixed` or
+`wont-fix`). Open pebs (status `new` or `in-progress`) are preserved.
 
 ### AI Agent Commands
 
-> **Note:** The following commands are designed for AI agents and use JSON for input/output. They are not intended for human use.
+> **Note:** The following commands are designed for AI agents and use JSON for
+> input/output. They are not intended for human use.
 
 #### `peb new`
+
 Create a new task from JSON via stdin
+
 ```bash
 echo '{"title":"Fix bug","content":"Description...","type":"bug"}' | peb new
 ```
 
 #### `peb read <id> [<id> ...]`
+
 Display full task details as JSON (accepts one or more IDs)
+
 ```bash
 peb read peb-ab12
 peb read peb-ab12 peb-cd34 peb-ef56
 ```
 
 #### `peb update <id> <json>`
+
 Update task fields
+
 ```bash
 peb update peb-ab12 '{"status":"in-progress"}'
 peb update peb-ab12 '{"title":"New title"}'
 ```
 
 #### `peb query [filters]`
+
 Search and list tasks
+
 ```bash
 peb query                              # List all
 peb query id:peb-ab12                  # Show specific peb
@@ -161,20 +152,25 @@ peb query --fields id,title status:new # Output specific fields
 ```
 
 #### `peb delete <id> [<id> ...]`
+
 Delete one or more tasks by ID (permanently removes them)
+
 ```bash
 peb delete peb-ab12
 peb delete peb-ab12 peb-cd34 peb-ef56
 ```
 
 #### `peb prime [--mcp]`
-Output agent instructions. With `--mcp` flag, outputs instructions formatted for MCP server integration.
+
+Output agent instructions. With `--mcp` flag, outputs instructions formatted for
+MCP server integration.
 
 ## Data Model
 
 Each peb has:
 
-- **id**: Unique identifier (e.g., `peb-ab12`)
+- **id**: Unique identifier (e.g., `peb-ab12`, the prefix is customizable via
+  the config)
 - **title**: Short description
 - **type**: `bug`, `feature`, `epic`, or `task`
 - **status**: `new`, `in-progress`, `fixed`, or `wont-fix`
@@ -209,6 +205,7 @@ status: new
 created: 2026-01-18T12:00:00-08:00
 changed: 2026-01-18T12:00:00-08:00
 ---
+
 Users cannot log in if their name is "null".
 ```
 
@@ -243,4 +240,5 @@ AGPL-3.0. See LICENSE file for details.
 
 ## Acknowledgments
 
-- Inspired by [github.com/hmans/beans](https://github.com/hmans/beans) and [github.com/steveyegge/beads/](https://github.com/steveyegge/beads/)
+Inspired by [github.com/hmans/beans](https://github.com/hmans/beans) and
+[github.com/steveyegge/beads/](https://github.com/steveyegge/beads/)
