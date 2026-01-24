@@ -67,6 +67,12 @@ Run `peb init --opencode` to automatically install the plugin to `.opencode/plug
 
 For global installation (all projects), manually copy [the plugin file](.opencode/plugin/pebbles.ts) to `~/.opencode/plugin/pebbles.ts`.
 
+### Automatic Updates
+
+The plugin is automatically updated when running any `peb` command if a newer version is available. This ensures that the plugin stays in sync with the installed `peb` binary.
+
+To disable the auto update of the opencode plugin, remove the "Version" string from the first line of `.opencode/plugin/pebbles.ts`.
+
 ### How It Works
 
 The plugin:

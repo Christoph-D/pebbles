@@ -69,6 +69,10 @@ Examples:
 				return err
 			}
 
+			if err := config.MaybeUpdatePlugin(); err != nil {
+				return fmt.Errorf("failed to update plugin: %w", err)
+			}
+
 			s := store.New(cfg.PebblesDir(), cfg.Prefix)
 			if err := s.Load(); err != nil {
 				return err

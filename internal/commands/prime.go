@@ -2,6 +2,7 @@ package commands
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strings"
 	"text/template"
@@ -30,6 +31,10 @@ func PrimeCommand() *cli.Command {
 			cfg, err := config.Load()
 			if err != nil {
 				return err
+			}
+
+			if err := config.MaybeUpdatePlugin(); err != nil {
+				return fmt.Errorf("failed to update plugin: %w", err)
 			}
 
 			templateContent := promptTemplate
