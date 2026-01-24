@@ -1,4 +1,4 @@
-// Version 20260124T172849Z-c0d3ffa
+// Version 20260124T181119Z-126a0fd
 //
 // IMPORTANT: **This file in .opencode/plugin/ is auto-generated**
 //
@@ -10,11 +10,6 @@ import { spawn } from "bun";
 
 /**
  * Pebbles plugin for opencode
- *
- * Put this file into one of these locations:
- *
- * - Project local: .opencode/plugin/pebbles.ts
- * - User global: ~/.opencode/plugin/pebbles.ts
  */
 
 export const PebblesPlugin: Plugin = async ({ $ }) => {
