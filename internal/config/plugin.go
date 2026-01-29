@@ -72,23 +72,15 @@ func MaybeUpdatePlugin(cfg *Config) error {
 }
 
 func InstallOpencodePlugin(cfg *Config) error {
+	data := struct {
+		Version string
+	}{
+		Version: pebblesPluginVersion(),
+	}
+
 	tmpl, err := template.New("pebblesPlugin").Parse(pebblesPlugin)
 	if err != nil {
 		return err
-	}
-
-	data := struct {
-		PebbleIDSuffix   string
-		PebbleIDPattern  string
-		PebbleIDPattern2 string
-		PebbleIDPattern3 string
-		Version          string
-	}{
-		PebbleIDSuffix:   strings.Repeat("x", cfg.IDLength),
-		PebbleIDPattern:  cfg.Prefix + "-" + strings.Repeat("x", cfg.IDLength),
-		PebbleIDPattern2: cfg.Prefix + "-" + strings.Repeat("y", cfg.IDLength),
-		PebbleIDPattern3: cfg.Prefix + "-" + strings.Repeat("z", cfg.IDLength),
-		Version:          pebblesPluginVersion(),
 	}
 
 	var buf strings.Builder

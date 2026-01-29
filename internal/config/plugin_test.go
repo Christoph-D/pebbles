@@ -182,51 +182,7 @@ id_length = 4
 		if !strings.Contains(contentStr, "// Version ") {
 			t.Error("plugin file does not contain version comment")
 		}
-		if !strings.Contains(contentStr, "peb-xxxx") {
-			t.Error("plugin file does not contain peb-xxxx pattern (id_length=4)")
-		}
 	})
-
-	t.Run("custom id_length", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		t.Chdir(tmpDir)
-
-		pebblesDir := ".pebbles"
-		if err := os.Mkdir(pebblesDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		configContent := `# Pebbles configuration
- prefix = "task"
- id_length = 6
- `
-		configPath := filepath.Join(pebblesDir, "config.toml")
-		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := Load()
-		if err != nil {
-			t.Fatalf("Load() error = %v", err)
-		}
-
-		err = InstallOpencodePlugin(cfg)
-		if err != nil {
-			t.Fatalf("InstallOpencodePlugin() error = %v", err)
-		}
-
-		pluginFile := filepath.Join(pluginPath(cfg), pluginFilename)
-		content, err := os.ReadFile(pluginFile)
-		if err != nil {
-			t.Fatalf("failed to read plugin file: %v", err)
-		}
-
-		contentStr := string(content)
-		if !strings.Contains(contentStr, "task-xxxxxx") {
-			t.Error("plugin file does not contain task-xxxxxx pattern (id_length=6)")
-		}
-	})
-
 }
 
 func TestMaybeUpdatePlugin(t *testing.T) {

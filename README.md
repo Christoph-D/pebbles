@@ -106,6 +106,23 @@ flag, also installs the opencode MCP plugin (creates
 Delete all closed pebs (permanently removes pebs with status `fixed` or
 `wont-fix`). Open pebs (status `new` or `in-progress`) are preserved.
 
+#### `peb config`
+
+Display the current pebbles configuration as JSON. This command is primarily used
+by the opencode plugin to dynamically load configuration at runtime.
+
+```bash
+peb config
+```
+
+Output example:
+```json
+{
+  "prefix": "peb",
+  "id_length": 4
+}
+```
+
 ### AI Agent Commands
 
 > **Note:** The following commands are designed for AI agents and use JSON for

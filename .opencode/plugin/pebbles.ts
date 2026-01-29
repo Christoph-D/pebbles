@@ -15,6 +15,28 @@ import { spawn } from "bun";
 export const PebblesPlugin: Plugin = async ({ $ }) => {
   const prime = await $`peb prime --mcp`.text();
 
+  const configProc = spawn(['peb', 'config'], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  const [configText, configError] = await Promise.all([
+    new Response(configProc.stdout).text(),
+    new Response(configProc.stderr).text(),
+  ]);
+  await configProc.exited;
+
+  if (configError.trim()) {
+    throw new Error(`Failed to get config: ${configError.trim()}`);
+  }
+
+  const config = JSON.parse(configText);
+  const prefix = config.prefix;
+  const idLength = config.id_length;
+  const pebbleIDPattern = `${prefix}-${"x".repeat(idLength)}`;
+  const pebbleIDPattern2 = `${prefix}-${"y".repeat(idLength)}`;
+  const pebbleIDPattern3 = `${prefix}-${"z".repeat(idLength)}`;
+
   return {
     "experimental.chat.system.transform": async (_, output) => {
       output.system.push(prime);
@@ -58,7 +80,7 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
       peb_read: tool({
         description: "Read one or more pebs by ID. Returns full pebs data as JSON.",
         args: {
-          id: tool.schema.array(tool.schema.string()).describe("Array of peb IDs to read (e.g., ['peb-xxxx', 'peb-yyyy'])"),
+          id: tool.schema.array(tool.schema.string()).describe(`Array of peb IDs to read (e.g., ['${pebbleIDPattern}', '${pebbleIDPattern2}'])`),
         },
         async execute(args) {
           const proc = spawn(['peb', 'read', ...args.id], {
@@ -78,7 +100,7 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
       peb_update: tool({
         description: "Update a peb. Optional fields: status (new|in-progress|fixed|wont-fix), title, content, type (bug|feature|epic|task), blocked_by (array of peb IDs)",
         args: {
-          id: tool.schema.string().describe("The peb ID to update (e.g., peb-xxxx)"),
+          id: tool.schema.string().describe(`The peb ID to update (e.g., ${pebbleIDPattern})`),
           status: tool.schema.string().optional().describe("Status: new, in-progress, fixed, or wont-fix"),
           title: tool.schema.string().optional().describe("Short description of the peb"),
           content: tool.schema.string().optional().describe("Markdown description of the peb"),
@@ -109,7 +131,7 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
         },
       }),
       peb_query: tool({
-        description: "Query pebs with optional filters (id:peb-xxxx|id:(peb-xxxx|peb-yyyy), status:new|in-progress|fixed|wont-fix|open|closed, type:bug|feature|epic|task, blocked-by:peb-xxxx, --fields:id,title). Returns list of pebs.",
+        description: `Query pebs with optional filters (id:${pebbleIDPattern}|id:(${pebbleIDPattern}|${pebbleIDPattern2}), status:new|in-progress|fixed|wont-fix|open|closed, type:bug|feature|epic|task, blocked-by:${pebbleIDPattern}, --fields:id,title). Returns list of pebs.`,
         args: {
           filters: tool.schema.array(tool.schema.string()).optional().describe("Array of filters (e.g., ['status:new', 'type:bug'])"),
           fields: tool.schema.array(tool.schema.string()).optional().describe("Array of fields to output (e.g., ['id', 'title'])"),
@@ -140,7 +162,7 @@ export const PebblesPlugin: Plugin = async ({ $ }) => {
       peb_delete: tool({
         description: "Delete pebs by ID.",
         args: {
-          id: tool.schema.array(tool.schema.string()).describe("Array of peb IDs to delete (e.g., ['peb-xxxx', 'peb-yyyy'])"),
+          id: tool.schema.array(tool.schema.string()).describe(`Array of peb IDs to delete (e.g., ['${pebbleIDPattern}', '${pebbleIDPattern2}'])`),
         },
         async execute(args) {
           const proc = spawn(['peb', 'delete', ...args.id], {

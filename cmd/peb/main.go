@@ -21,6 +21,7 @@ func main() {
 			commands.QueryCommand(),
 			commands.CleanupCommand(),
 			commands.PrimeCommand(),
+			commands.ConfigCommand(),
 		},
 	}
 
