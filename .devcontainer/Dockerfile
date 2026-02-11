@@ -1,6 +1,6 @@
 FROM alpine:3.23
 
-RUN apk add --no-cache bash curl gcompat git go less ripgrep tzdata make
+RUN apk add --no-cache bash curl gcompat git go less openssh-client-default ripgrep tzdata make
 RUN ln -sf /usr/share/zoneinfo/hostlocaltime /etc/localtime
 
 ARG USERNAME=pebbles
