@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Christoph-D/pebbles/internal/peb"
 	"github.com/urfave/cli/v2"
+	"go.yozora.eu/pebbles/internal/peb"
 )
 
 func TestQueryCommand(t *testing.T) {

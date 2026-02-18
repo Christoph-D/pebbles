@@ -30,7 +30,7 @@ only a handful of commands.
 Install pebbles:
 
 ```bash
-go install github.com/Christoph-D/pebbles/cmd/peb@latest
+go install go.yozora.eu/pebbles/cmd/peb@latest
 ```
 
 Then run in your project directory:

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Christoph-D/pebbles/internal/peb"
-	"github.com/Christoph-D/pebbles/internal/store"
 	"github.com/urfave/cli/v2"
+	"go.yozora.eu/pebbles/internal/peb"
+	"go.yozora.eu/pebbles/internal/store"
 )
 
 func setupTestStoreForUpdate(t *testing.T) (string, *store.Store, func()) {

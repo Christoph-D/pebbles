@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Christoph-D/pebbles/internal/config"
-	"github.com/Christoph-D/pebbles/internal/peb"
-	"github.com/Christoph-D/pebbles/internal/store"
 	"github.com/urfave/cli/v2"
+	"go.yozora.eu/pebbles/internal/config"
+	"go.yozora.eu/pebbles/internal/peb"
+	"go.yozora.eu/pebbles/internal/store"
 )
 
 type NewInput struct {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Christoph-D/pebbles/internal/config"
 	"github.com/urfave/cli/v2"
+	"go.yozora.eu/pebbles/internal/config"
 )
 
 //go:embed data/prompt.md

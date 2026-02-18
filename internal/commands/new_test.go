@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Christoph-D/pebbles/internal/peb"
-	"github.com/Christoph-D/pebbles/internal/store"
+	"go.yozora.eu/pebbles/internal/peb"
+	"go.yozora.eu/pebbles/internal/store"
 )
 
 func setupTestStore(t *testing.T) (string, *store.Store, func()) {

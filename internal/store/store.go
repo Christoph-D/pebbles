@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Christoph-D/pebbles/internal/peb"
+	"go.yozora.eu/pebbles/internal/peb"
 )
 
 type Store struct {

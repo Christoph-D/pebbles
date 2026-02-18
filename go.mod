@@ -1,4 +1,4 @@
-module github.com/Christoph-D/pebbles
+module go.yozora.eu/pebbles
 
 go 1.25.6
 

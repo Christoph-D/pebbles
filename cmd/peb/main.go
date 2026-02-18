@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Christoph-D/pebbles/internal/commands"
 	"github.com/urfave/cli/v2"
+	"go.yozora.eu/pebbles/internal/commands"
 )
 
 func main() {

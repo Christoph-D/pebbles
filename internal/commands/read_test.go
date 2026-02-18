@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Christoph-D/pebbles/internal/peb"
+	"go.yozora.eu/pebbles/internal/peb"
 )
 
 func TestReadCommand(t *testing.T) {
