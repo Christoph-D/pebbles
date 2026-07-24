@@ -230,6 +230,8 @@ function spawnSubagent(opts: {
 	prompt: string;
 	timeoutMs: number;
 	signal: AbortSignal | undefined;
+	/** Fired after each finalized assistant message with the live result snapshot. */
+	onProgress?: (result: SubagentResult) => void;
 }): { proc: ChildProcess; result: Promise<SubagentResult> } {
 	const args = ["--mode", "json", "-p", "--no-session", "--no-extensions", "--no-context-files", "--approve"];
 	if (opts.model) args.push("--model", opts.model);
@@ -281,6 +283,7 @@ function spawnSubagent(opts: {
 				if (msg.model && !result.model) result.model = msg.model;
 				if (msg.stopReason) result.stopReason = msg.stopReason;
 				if (msg.errorMessage) result.errorMessage = msg.errorMessage;
+				opts.onProgress?.(result);
 			}
 		};
 
@@ -688,8 +691,9 @@ export default async function (pi: ExtensionAPI) {
 		} else if (success) {
 			lines.push("(no new commits detected — the subagent may not have committed)");
 		}
-		if (success && job.summary) {
-			lines.push("", "Subagent summary:", job.summary);
+		if (success) {
+			if (job.summary) lines.push("", "Subagent summary:", job.summary);
+			lines.push("", `Subagent turns: ${job.turns}`);
 		}
 		if (!success) {
 			const reason = job.errorMessage || sub.stderr.trim() || sub.summary || `subagent exited with code ${sub.code}`;
@@ -822,15 +826,9 @@ export default async function (pi: ExtensionAPI) {
 				// 4. Spawn the subagent (non-blocking) and register the job.
 				const prompt = buildFixPrompt(peb, commitMsg, params.extra_prompt);
 				emit(`Started subagent in ${worktreePath}${model ? ` (model ${model})` : ""}`);
-				const { proc, result } = spawnSubagent({
-					cwd: worktreePath,
-					model,
-					prompt,
-					timeoutMs: cfg.timeoutMs,
-					signal: undefined,
-				});
-				spawned = true;
 
+				// Build the job shell first so the stream progress callback can mirror
+				// live counters (turns, summary, ...) onto it as they arrive.
 				const job: FixJob = {
 					pebId,
 					title: peb.title,
@@ -843,13 +841,30 @@ export default async function (pi: ExtensionAPI) {
 					model,
 					startedAt: new Date().toISOString(),
 					status: "running",
-					proc,
+					proc: undefined,
 					turns: 0,
 					summary: "",
 					changeIds: [],
 					stopReason: undefined,
 					errorMessage: undefined,
 				};
+				const { proc, result } = spawnSubagent({
+					cwd: worktreePath,
+					model,
+					prompt,
+					timeoutMs: cfg.timeoutMs,
+					signal: undefined,
+					onProgress: (r) => {
+						// Mirror live progress so fix_peb_list reflects in-flight jobs.
+						job.turns = r.turns;
+						if (r.summary) job.summary = r.summary;
+						if (r.model && !job.model) job.model = r.model;
+						if (r.stopReason) job.stopReason = r.stopReason;
+						if (r.errorMessage) job.errorMessage = job.errorMessage || r.errorMessage;
+					},
+				});
+				job.proc = proc;
+				spawned = true;
 				fixJobs.set(pebId, job);
 
 				// 5. Background completion: capture commits, tear down, notify once.
