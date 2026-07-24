@@ -66,8 +66,8 @@ from the first line of `.opencode/plugin/pebbles.ts`.
 
 ## Pi Integration
 
-If you use [pi](https://github.com/earendil-works/pi-coding-agent), install the
-pi extension, which provides:
+If you use [pi](https://github.com/earendil-works/pi), install the pi extension,
+which provides:
 
 - **Agent Instructions** (the pebbles "prime" prompt) injected into the system
   prompt on every turn
