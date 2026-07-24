@@ -621,6 +621,14 @@ export default async function (pi: ExtensionAPI) {
 		if (success && job.changeIds.length) {
 			lines.push("New commits (jj change ids):");
 			for (const c of job.changeIds) lines.push(`- ${c}`);
+			const firstChangeId = job.changeIds[0].split(/\s+/)[0];
+			lines.push(
+				"Bring these changes into your working copy by rebasing them before the current commit:",
+			);
+			lines.push(`  jj rebase --source ${firstChangeId} --insert-before @`);
+			lines.push(
+				"(Only the first change id is needed — --source rebases that change and all of its descendants.)",
+			);
 		} else if (success) {
 			lines.push("(no new commits detected — the subagent may not have committed)");
 		}
@@ -670,6 +678,7 @@ export default async function (pi: ExtensionAPI) {
 		promptSnippet: "Delegate fixing one peb to a background subagent in a throwaway jj worktree",
 		promptGuidelines: [
 			"Use fix_peb to hand off fixing a single peb to an isolated BACKGROUND subagent that works in its own temporary jj worktree and commits with `jj commit`. fix_peb returns immediately (it does NOT block the turn); you will be notified via a message when the subagent finishes (success or failure), including the new commit change ids. Call fix_peb several times in one turn to launch fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. fix_peb does not merge or push anything.",
+			"After a successful fix, the completion message tells you to rebase the new commits before your working copy with `jj rebase --source <first-change-id> --insert-before @` (only the first change id is needed — --source rebases it and all descendants). Run that to pull the subagent's work into the main repo.",
 		],
 		description: [
 			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent (no extensions) that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
