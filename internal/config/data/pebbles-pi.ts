@@ -438,6 +438,46 @@ function renderPebResult(
 	return new Text(theme.fg(color, summary) + hint, 0, 0);
 }
 
+/**
+ * Render the fix_peb completion notification for the TUI, honoring the ctrl+o
+ * expand toggle (app.tools.expand) the same way the regular peb tool results
+ * do (see renderPebResult). The pi TUI applies that toggle to custom messages
+ * too, but only a registered message renderer receives the `expanded` flag —
+ * the built-in default always shows the full body and ignores it.
+ *
+ * Collapsed shows a compact one-line summary (the success/failure header line)
+ * with a line-count hint; expanded shows the full notification.
+ */
+function renderFixPebComplete(
+	message: { content: string | Array<{ type: string; text?: string }>; details?: { status?: string } },
+	options: { expanded: boolean },
+	theme: Theme,
+): Text {
+	const text = (
+		Array.isArray(message.content)
+			? message.content.filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n")
+			: message.content
+	).trim();
+
+	if (!text) {
+		return new Text(theme.fg("dim", "(no output)"), 0, 0);
+	}
+
+	const status = message.details?.status;
+	const color = status === "failed" ? "error" : status === "succeeded" ? "success" : "toolOutput";
+
+	if (options.expanded) {
+		return new Text(theme.fg(color, text), 0, 0);
+	}
+
+	// Collapsed: the first line is already a good summary
+	// ("[fix_peb] Background fix for peb-xxxx (...) SUCCEEDED|FAILED.").
+	const lineCount = text.split("\n").length;
+	const summary = truncateForSummary(text.split("\n")[0] ?? "");
+	const hint = lineCount > 1 ? theme.fg("muted", ` (${lineCount} lines)`) : "";
+	return new Text(theme.fg(color, summary) + hint, 0, 0);
+}
+
 export default async function (pi: ExtensionAPI) {
 	// Load the prime prompt and config once at startup. If `peb` is not on PATH
 	// or this isn't a pebbles project, the extension stays inert.
@@ -474,6 +514,12 @@ export default async function (pi: ExtensionAPI) {
 			};
 		});
 	}
+
+	// Render the fix_peb completion notification so it honors the ctrl+o expand
+	// toggle, just like the regular peb tool results. Without a registered
+	// renderer the built-in default ignores the toggle and always shows the
+	// full body.
+	pi.registerMessageRenderer("fix-peb-complete", renderFixPebComplete);
 
 	pi.registerTool({
 		name: "peb_new",
