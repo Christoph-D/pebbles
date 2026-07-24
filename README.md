@@ -73,6 +73,9 @@ which provides:
   prompt on every turn
 - **Tools** for each peb command (`peb_new`, `peb_read`, `peb_update`,
   `peb_query`, `peb_delete`) that the agent can call directly
+- **`fix_peb`** to delegate fixing a single peb to an isolated subagent that
+  works in a throwaway jj worktree and commits there (see
+  [Delegating Fixes with `fix_peb`](#delegating-fixes-with-fix_peb))
 
 ### Setup
 
@@ -88,6 +91,49 @@ installed `peb` binary.
 
 To disable the auto update of the pi extension, remove the "Version" string from
 the first line of `.pi/extensions/pebbles.ts`.
+
+### Delegating Fixes with `fix_peb`
+
+The extension also registers a `fix_peb` tool. Calling it makes the agent:
+
+1. Read the peb.
+2. Create a temporary jj worktree off a configurable base revset
+   (`jj workspace add -r <base> "<tmpdir>/<id>"`).
+3. Optionally run a worktree-initialization script (for example to install
+   dependencies).
+4. Spawn a subagent (no extensions) that fixes the peb and commits its work
+   with `jj commit -m "<message>"`.
+5. Forget the workspace and delete the temporary directory.
+6. Report success/failure and the resulting jj change ids back to the main
+   agent, which does not merge or push anything.
+
+The main agent may call `fix_peb` several times in one turn to fix multiple
+pebs in parallel; each runs in its own isolated worktree and a process-wide
+semaphore caps how many run at once (`max_parallel`).
+
+Static configuration lives in `.pi/fix-peb.json` (project-local, discovered by
+walking up from the working directory; merged over
+`~/.pi/agent/fix-peb.json`). All fields are optional:
+
+```json
+{
+  "base_revset": "main",
+  "worktree_init": "cd \"$1\" && pnpm install",
+  "subagent_model": "provider/model",
+  "commit_message": "fix: {title} ({id})",
+  "timeout_ms": 1800000,
+  "max_parallel": 4
+}
+```
+
+| Field | Default | Description |
+| --- | --- | --- |
+| `base_revset` | `"main"` | jj revset the worktree is branched from. |
+| `worktree_init` | _(none)_ | Shell script run after creating the worktree. It runs in the main repository's working directory and receives the worktree path as `$1` (for example `ln -s "$PWD/node_modules" "$1/node_modules"`). |
+| `subagent_model` | _(current model)_ | `provider/id` for the subagent. When unset, the subagent uses the main agent's currently selected model. |
+| `commit_message` | `"fix: {title} ({id})"` | Commit-message template; `{id}` and `{title}` are substituted from the peb and sanitized to a single, shell-safe line. |
+| `timeout_ms` | `1800000` | Per-subagent timeout in milliseconds. |
+| `max_parallel` | `4` | Maximum number of subagents running at once. |
 
 ## Using Pebbles with Coding Agents
 
