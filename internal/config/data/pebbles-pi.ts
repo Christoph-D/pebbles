@@ -9,7 +9,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -85,18 +85,6 @@ const DEFAULT_FIX_PEB_CONFIG: FixPebConfig = {
 	timeoutMs: 30 * 60 * 1000,
 	maxParallel: 6,
 };
-
-interface FixPebDetails {
-	pebId: string;
-	workspace: string;
-	worktree: string;
-	baseRevset: string;
-	model?: string;
-	changeIds: string[];
-	phase: string;
-	streamingSummary?: string;
-	subagent?: { code: number; turns: number; stopReason?: string };
-}
 
 interface UsageStats {
 	input: number;
@@ -223,28 +211,30 @@ function tryKill(proc: { kill: (sig?: string) => boolean }, sig: string) {
 	}
 }
 
-/** Spawn a subagent `pi` process in JSON print mode and collect its result. */
-function runSubagent(opts: {
+/** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
+ *  the child handle and a promise that resolves when the process exits. The
+ *  caller drives completion (capturing commits, tearing down, notifying). */
+function spawnSubagent(opts: {
 	cwd: string;
 	model?: string;
 	prompt: string;
 	timeoutMs: number;
 	signal: AbortSignal | undefined;
-	onProgress?: (text: string, turns: number) => void;
-}): Promise<SubagentResult> {
-	return new Promise<SubagentResult>((resolve) => {
-		const args = ["--mode", "json", "-p", "--no-session", "--no-extensions", "--no-context-files", "--approve"];
-		if (opts.model) args.push("--model", opts.model);
-		args.push(opts.prompt);
+}): { proc: ChildProcess; result: Promise<SubagentResult> } {
+	const args = ["--mode", "json", "-p", "--no-session", "--no-extensions", "--no-context-files", "--approve"];
+	if (opts.model) args.push("--model", opts.model);
+	args.push(opts.prompt);
 
-		const proc = spawn("pi", args, { cwd: opts.cwd, stdio: ["ignore", "pipe", "pipe"] });
-		const result: SubagentResult = {
-			code: 0,
-			summary: "",
-			stderr: "",
-			turns: 0,
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 },
-		};
+	const proc = spawn("pi", args, { cwd: opts.cwd, stdio: ["ignore", "pipe", "pipe"] });
+	const result: SubagentResult = {
+		code: 0,
+		summary: "",
+		stderr: "",
+		turns: 0,
+		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 },
+	};
+
+	const done = new Promise<SubagentResult>((resolve) => {
 		let stdoutBuf = "";
 		let settled = false;
 		const finish = (code: number) => {
@@ -281,7 +271,6 @@ function runSubagent(opts: {
 				if (msg.model && !result.model) result.model = msg.model;
 				if (msg.stopReason) result.stopReason = msg.stopReason;
 				if (msg.errorMessage) result.errorMessage = msg.errorMessage;
-				if (opts.onProgress && text) opts.onProgress(result.summary, result.turns);
 			}
 		};
 
@@ -322,7 +311,36 @@ function runSubagent(opts: {
 			finish(code ?? 0);
 		});
 	});
+
+	return { proc, result: done };
 }
+
+/** A background fix_peb job, kept in the registry for the session. */
+interface FixJob {
+	pebId: string;
+	title: string;
+	type?: string;
+	workspace: string;
+	worktree: string;
+	tmpDir: string;
+	cwd: string;
+	baseRevset: string;
+	model?: string;
+	startedAt: string;
+	status: "running" | "succeeded" | "failed";
+	proc?: ChildProcess;
+	turns: number;
+	summary: string;
+	changeIds: string[];
+	stopReason?: string;
+	errorMessage?: string;
+}
+
+/** Registry of background fix_peb jobs, keyed by peb id (one job per peb at a time). */
+const fixJobs = new Map<string, FixJob>();
+
+/** Set during session_shutdown so completion handlers skip notifications. */
+let sessionShuttingDown = false;
 
 // ----------------------------------------------------------------------------
 // Tool result rendering
@@ -590,17 +608,73 @@ export default async function (pi: ExtensionAPI) {
 	const fixPebSem = new Semaphore(fixPebConfig.maxParallel);
 	const jj = (args: string[], opts: { cwd: string }) => pi.exec("jj", args, opts);
 
+	/** Build the one-shot completion notification and wake the main agent.
+	 *  Called exactly once per job, only on finish (success or failure). */
+	const notifyFixComplete = (job: FixJob, sub: SubagentResult) => {
+		const success = job.status === "succeeded";
+		const lines: string[] = [];
+		lines.push(
+			success
+				? `[fix_peb] Background fix for ${job.pebId} (${job.title}) SUCCEEDED.`
+				: `[fix_peb] Background fix for ${job.pebId} (${job.title}) FAILED.`,
+		);
+		if (success && job.changeIds.length) {
+			lines.push("New commits (jj change ids):");
+			for (const c of job.changeIds) lines.push(`- ${c}`);
+		} else if (success) {
+			lines.push("(no new commits detected — the subagent may not have committed)");
+		}
+		if (success && job.summary) {
+			lines.push("", "Subagent summary:", job.summary);
+		}
+		if (!success) {
+			const reason = job.errorMessage || sub.stderr.trim() || sub.summary || `subagent exited with code ${sub.code}`;
+			lines.push("", `Reason: ${reason}`);
+		}
+		try {
+			pi.sendMessage(
+				{
+					customType: "fix-peb-complete",
+					content: lines.join("\n"),
+					display: true,
+					details: { pebId: job.pebId, status: job.status, changeIds: job.changeIds },
+				},
+				{ triggerTurn: true, deliverAs: "followUp" },
+			);
+		} catch {
+			// session may be gone; best-effort
+		}
+	};
+
+	/** Forget a job's workspace and remove its temp dir. Best-effort. */
+	const teardownJob = async (job: FixJob) => {
+		if (job.workspace) {
+			try {
+				await jj(["workspace", "forget", job.workspace], { cwd: job.cwd });
+			} catch {
+				// ignore — best-effort
+			}
+		}
+		if (job.tmpDir) {
+			try {
+				fs.rmSync(job.tmpDir, { recursive: true, force: true });
+			} catch {
+				// ignore
+			}
+		}
+	};
+
 	pi.registerTool({
 		name: "fix_peb",
-		label: "Peb Fix (subagent)",
-		promptSnippet: "Delegate fixing one peb to an isolated subagent in a throwaway jj worktree",
+		label: "Peb Fix (background subagent)",
+		promptSnippet: "Delegate fixing one peb to a background subagent in a throwaway jj worktree",
 		promptGuidelines: [
-			"Use fix_peb to hand off fixing a single peb to an isolated subagent that works in its own temporary jj worktree and commits there. You may call fix_peb several times in one turn to fix multiple pebs in parallel. The tool cleans up the worktree itself and only reports success/failure and the resulting commit change ids; it does not merge or push anything.",
+			"Use fix_peb to hand off fixing a single peb to an isolated BACKGROUND subagent that works in its own temporary jj worktree and commits with `jj commit`. fix_peb returns immediately (it does NOT block the turn); you will be notified via a message when the subagent finishes (success or failure), including the new commit change ids. Call fix_peb several times in one turn to launch fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. fix_peb does not merge or push anything.",
 		],
 		description: [
-			"Delegate fixing a single peb to an isolated subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent (no extensions) that fixes the peb and commits its work with `jj commit`, captures the new commit change ids, then forgets the workspace and deletes the temp dir.",
+			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent (no extensions) that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
 			`Arguments: peb_id (e.g., ${pebbleIDPattern}), optional extra_prompt appended to the subagent instructions.`,
-			"Call fix_peb multiple times in one turn to fix several pebs in parallel. Returns success/failure and the new commit change ids; does not merge or push.",
+			"Call fix_peb multiple times in one turn to launch several fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. Does not merge or push.",
 		].join(" "),
 		parameters: Type.Object({
 			peb_id: Type.String({ description: `The peb ID to fix (e.g., ${pebbleIDPattern})` }),
@@ -608,23 +682,20 @@ export default async function (pi: ExtensionAPI) {
 				Type.String({ description: "Optional extra instructions appended to the subagent prompt" }),
 			),
 		}),
-		async execute(_toolCallId, params, signal, onUpdate, ctx) {
+		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
 			const cfg = fixPebConfig;
 			const pebId = String(params.peb_id || "").trim();
 			if (!pebId) throw new Error("fix_peb requires a peb_id");
 
-			const details: FixPebDetails = {
-				pebId,
-				workspace: "",
-				worktree: "",
-				baseRevset: cfg.baseRevset,
-				model: undefined,
-				changeIds: [],
-				phase: "reading",
-			};
-			const emit = (text: string, patch?: Partial<FixPebDetails>) => {
-				if (patch) Object.assign(details, patch);
-				onUpdate?.({ content: [{ type: "text", text }], details });
+			const existing = fixJobs.get(pebId);
+			if (existing && existing.status === "running") {
+				throw new Error(
+					`A fix is already running for ${pebId}. Use fix_peb_list to monitor it or fix_peb_kill to stop it before starting another.`,
+				);
+			}
+
+			const emit = (text: string) => {
+				onUpdate?.({ content: [{ type: "text", text }] });
 			};
 
 			await fixPebSem.acquire();
@@ -632,6 +703,8 @@ export default async function (pi: ExtensionAPI) {
 			let workspaceName = "";
 			let worktreePath = "";
 			let workspaceCreated = false;
+			let anchorId = "";
+			let spawned = false;
 			try {
 				// 1. Read the peb.
 				let peb: { id: string; title: string; type?: string; status?: string; content?: string };
@@ -652,17 +725,12 @@ export default async function (pi: ExtensionAPI) {
 
 				// Resolve model: explicit config, else the main agent's current model.
 				const model = cfg.subagentModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
-				details.model = model;
 
 				// 2. Temp dir + jj workspace off the base revset.
 				tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "peb-fix-"));
 				workspaceName = peb.id;
 				worktreePath = path.join(tmpDir, peb.id);
-				emit(`Creating jj workspace "${workspaceName}" from revset "${cfg.baseRevset}"...`, {
-					phase: "worktree",
-					workspace: workspaceName,
-					worktree: worktreePath,
-				});
+				emit(`Creating jj workspace "${workspaceName}" from revset "${cfg.baseRevset}"...`);
 				const addRes = await jj(["workspace", "add", "-r", cfg.baseRevset, worktreePath], { cwd: ctx.cwd });
 				if (addRes.code !== 0) {
 					throw new Error(
@@ -673,11 +741,11 @@ export default async function (pi: ExtensionAPI) {
 
 				// Anchor for reporting new commits: the base commit the worktree sits on.
 				const anchorRes = await jj(["log", "-r", "@-", "--no-graph", "-T", "change_id.short()"], { cwd: worktreePath });
-				const anchorId = (anchorRes.stdout || "").trim().split(/\s+/)[0] || "";
+				anchorId = (anchorRes.stdout || "").trim().split(/\s+/)[0] || "";
 
 				// 3. Optional worktree init (runs in main repo cwd, $1 = worktree path).
 				if (cfg.worktreeInit) {
-					emit(`Running worktree init: ${cfg.worktreeInit}`, { phase: "init" });
+					emit(`Running worktree init: ${cfg.worktreeInit}`);
 					const initRes = await pi.exec("sh", ["-c", cfg.worktreeInit, "sh", worktreePath], { cwd: ctx.cwd });
 					if (initRes.code !== 0) {
 						throw new Error(
@@ -686,78 +754,200 @@ export default async function (pi: ExtensionAPI) {
 					}
 				}
 
-				// 4. Spawn the subagent.
+				// 4. Spawn the subagent (non-blocking) and register the job.
 				const prompt = buildFixPrompt(peb, commitMsg, params.extra_prompt);
-				emit(`Running subagent in ${worktreePath}${model ? ` (model ${model})` : ""}...`, { phase: "subagent" });
-				const sub = await runSubagent({
+				emit(`Started subagent in ${worktreePath}${model ? ` (model ${model})` : ""}`);
+				const { proc, result } = spawnSubagent({
 					cwd: worktreePath,
 					model,
 					prompt,
 					timeoutMs: cfg.timeoutMs,
-					signal,
-					onProgress: (text, turns) =>
-						emit(`subagent (turn ${turns})...\n${text.slice(0, 600)}`, { phase: "subagent", streamingSummary: text }),
+					signal: undefined,
 				});
+				spawned = true;
 
-				// 5. Capture new commit change ids (best-effort, before teardown).
-				let changeIds: string[] = [];
-				if (anchorId) {
+				const job: FixJob = {
+					pebId,
+					title: peb.title,
+					type: peb.type,
+					workspace: workspaceName,
+					worktree: worktreePath,
+					tmpDir,
+					cwd: ctx.cwd,
+					baseRevset: cfg.baseRevset,
+					model,
+					startedAt: new Date().toISOString(),
+					status: "running",
+					proc,
+					turns: 0,
+					summary: "",
+					changeIds: [],
+					stopReason: undefined,
+					errorMessage: undefined,
+				};
+				fixJobs.set(pebId, job);
+
+				// 5. Background completion: capture commits, tear down, notify once.
+				void result.then(async (sub) => {
 					try {
-						const logRes = await jj(
-							["log", "-r", `${anchorId}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line()"],
-							{ cwd: worktreePath },
-						);
-						changeIds = (logRes.stdout || "")
-							.split("\n")
-							.map((l) => l.trim())
-							.filter(Boolean);
-					} catch {
-						// best-effort; ignore
+						job.summary = sub.summary;
+						job.turns = sub.turns;
+						job.stopReason = sub.stopReason;
+						job.errorMessage = job.errorMessage || sub.errorMessage;
+						job.proc = undefined;
+
+						// Capture new commit change ids before forgetting the workspace.
+						if (anchorId) {
+							try {
+								const logRes = await jj(
+									["log", "-r", `${anchorId}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line()"],
+									{ cwd: worktreePath },
+								);
+								job.changeIds = (logRes.stdout || "")
+									.split("\n")
+									.map((l) => l.trim())
+									.filter(Boolean);
+							} catch {
+								// best-effort
+							}
+						}
+
+						const failed = sub.code !== 0 || sub.stopReason === "error" || sub.stopReason === "aborted";
+						job.status = failed ? "failed" : "succeeded";
+
+						await teardownJob(job);
+					} finally {
+						fixPebSem.release();
+						if (!sessionShuttingDown) {
+							try {
+								notifyFixComplete(job, sub);
+							} catch {
+								// ignore — notification is best-effort
+							}
+						}
 					}
-				}
-				details.changeIds = changeIds;
-
-				const failed = sub.code !== 0 || sub.stopReason === "error" || sub.stopReason === "aborted";
-				if (failed) {
-					const reason = sub.errorMessage || sub.stderr.trim() || sub.summary || `subagent exited with code ${sub.code}`;
-					throw new Error(`Subagent failed to fix ${pebId} (${peb.title}): ${reason}`);
-				}
-
-				emit(`fixed ${pebId}: ${changeIds.length} commit(s)`, {
-					phase: "done",
-					subagent: { code: sub.code, turns: sub.turns, stopReason: sub.stopReason },
 				});
-				const commitLines = changeIds.length
-					? `\n\nNew commits (jj change ids):\n${changeIds.map((c) => `- ${c}`).join("\n")}`
-					: "\n\n(no new commits detected — the subagent may not have committed)";
+
 				return {
 					content: [
 						{
 							type: "text",
-							text: `Successfully fixed ${peb.id} (${peb.title}) via subagent.${commitLines}\n\nSubagent summary:\n${sub.summary || "(no summary)"}`,
+							text: `Started background fix for ${peb.id} (${peb.title}) in worktree ${worktreePath}${model ? ` (model ${model})` : ""}. You will be notified when the subagent finishes (success or failure). Use fix_peb_list to monitor or fix_peb_kill to abort.`,
 						},
 					],
-					details,
+					details: {
+						pebId,
+						workspace: workspaceName,
+						worktree: worktreePath,
+						baseRevset: cfg.baseRevset,
+						model,
+						phase: "running",
+					},
 				};
-			} finally {
-				// 6. Always tear down the workspace and temp dir (even on error/abort).
-				if (workspaceCreated) {
-					try {
-						await jj(["workspace", "forget", workspaceName], { cwd: ctx.cwd });
-					} catch {
-						// ignore — best-effort cleanup
+			} catch (e) {
+				// Setup failed before the subagent was spawned: clean up and release
+				// the slot. (On a spawned run the completion handler releases.)
+				if (!spawned) {
+					if (workspaceCreated) {
+						try {
+							await jj(["workspace", "forget", workspaceName], { cwd: ctx.cwd });
+						} catch {
+							// ignore
+						}
 					}
-				}
-				if (tmpDir) {
-					try {
-						fs.rmSync(tmpDir, { recursive: true, force: true });
-					} catch {
-						// ignore
+					if (tmpDir) {
+						try {
+							fs.rmSync(tmpDir, { recursive: true, force: true });
+						} catch {
+							// ignore
+						}
 					}
+					fixPebSem.release();
 				}
-				fixPebSem.release();
+				throw e;
 			}
 		},
 		renderResult: renderPebResult,
+	});
+
+	pi.registerTool({
+		name: "fix_peb_list",
+		label: "Peb Fix List",
+		promptSnippet: "List running and finished background fix_peb jobs",
+		description:
+			"List background fix_peb jobs (running and finished) with their status, worktree, subagent summary, and resulting commit change ids. Does not block.",
+		parameters: Type.Object({}),
+		async execute() {
+			const jobs = Array.from(fixJobs.values()).map((j) => ({
+				pebId: j.pebId,
+				title: j.title,
+				type: j.type,
+				status: j.status,
+				workspace: j.workspace,
+				worktree: j.worktree,
+				baseRevset: j.baseRevset,
+				model: j.model,
+				startedAt: j.startedAt,
+				turns: j.turns,
+				summary: j.summary,
+				changeIds: j.changeIds,
+				stopReason: j.stopReason,
+				errorMessage: j.errorMessage,
+			}));
+			return {
+				content: [
+					{
+						type: "text",
+						text: jobs.length ? JSON.stringify(jobs, null, 2) : "No fix_peb jobs. Use fix_peb to start one.",
+					},
+				],
+			};
+		},
+		renderResult: renderPebResult,
+	});
+
+	pi.registerTool({
+		name: "fix_peb_kill",
+		label: "Peb Fix Kill",
+		promptSnippet: "Kill a running background fix_peb subagent",
+		description:
+			"Abort a running background fix_peb subagent by peb id. Sends SIGTERM to the subagent; its workspace is torn down and a completion (failure) notification is delivered when it exits. Throws if the job is not running.",
+		parameters: Type.Object({
+			peb_id: Type.String({ description: `The peb ID whose fix subagent to kill (e.g., ${pebbleIDPattern})` }),
+		}),
+		async execute(_toolCallId, params) {
+			const pebId = String(params.peb_id || "").trim();
+			const job = fixJobs.get(pebId);
+			if (!job) throw new Error(`No fix_peb job found for ${pebId}. Use fix_peb_list to see jobs.`);
+			if (job.status !== "running" || !job.proc) {
+				throw new Error(`Fix for ${pebId} is not running (status: ${job.status}).`);
+			}
+			job.errorMessage = job.errorMessage || "killed by main agent via fix_peb_kill";
+			const proc = job.proc;
+			tryKill(proc, "SIGTERM");
+			setTimeout(() => {
+				if (job.proc) tryKill(job.proc, "SIGKILL");
+			}, 5000);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Sent SIGTERM to the subagent for ${pebId}. It will be torn down and a failure notification will follow when it exits.`,
+					},
+				],
+			};
+		},
+		renderResult: renderPebResult,
+	});
+
+	// Kill any still-running subagents and tear down their workspaces on exit.
+	// Children do not need to survive reload/restart, so no detached/unref.
+	pi.on("session_shutdown", async () => {
+		if (sessionShuttingDown) return;
+		sessionShuttingDown = true;
+		for (const job of fixJobs.values()) {
+			if (job.status === "running" && job.proc) tryKill(job.proc, "SIGTERM");
+		}
+		await Promise.all(Array.from(fixJobs.values()).map((job) => teardownJob(job)));
 	});
 }

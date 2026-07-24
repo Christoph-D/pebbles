@@ -73,8 +73,9 @@ which provides:
   prompt on every turn
 - **Tools** for each peb command (`peb_new`, `peb_read`, `peb_update`,
   `peb_query`, `peb_delete`) that the agent can call directly
-- **`fix_peb`** to delegate fixing a single peb to an isolated subagent that
-  works in a throwaway jj worktree and commits there (see
+- **`fix_peb`** to delegate fixing a single peb to an isolated **background**
+  subagent in a throwaway jj worktree (non-blocking), plus **`fix_peb_list`** /
+  **`fix_peb_kill`** to monitor and abort jobs (see
   [Delegating Fixes with `fix_peb`](#delegating-fixes-with-fix_peb))
 
 ### Setup
@@ -94,22 +95,37 @@ the first line of `.pi/extensions/pebbles.ts`.
 
 ### Delegating Fixes with `fix_peb`
 
-The extension also registers a `fix_peb` tool. Calling it makes the agent:
+The extension also registers a `fix_peb` tool that delegates fixing a single
+peb to an **isolated background subagent**. `fix_peb` does **not** block the
+main agent's turn — it returns immediately after starting the subagent, so the
+main agent stays responsive and can keep chatting or launch more fixes.
 
-1. Read the peb.
-2. Create a temporary jj worktree off a configurable base revset
+When called, the tool:
+
+1. Reads the peb.
+2. Creates a temporary jj worktree off a configurable base revset
    (`jj workspace add -r <base> "<tmpdir>/<id>"`).
-3. Optionally run a worktree-initialization script (for example to install
+3. Optionally runs a worktree-initialization script (for example to install
    dependencies).
-4. Spawn a subagent (no extensions) that fixes the peb and commits its work
+4. Spawns a subagent (no extensions) that fixes the peb and commits its work
    with `jj commit -m "<message>"`.
-5. Forget the workspace and delete the temporary directory.
-6. Report success/failure and the resulting jj change ids back to the main
-   agent, which does not merge or push anything.
+5. Returns immediately with a job id.
+6. When the subagent finishes (**success or failure**), the main agent is
+   notified via a message that includes the resulting jj change ids; the
+   worktree is then forgotten and removed. (jj keeps the commits reachable
+   after the workspace is forgotten, and the change ids are reported so the
+   main agent can find them. Nothing is merged or pushed.)
 
 The main agent may call `fix_peb` several times in one turn to fix multiple
 pebs in parallel; each runs in its own isolated worktree and a process-wide
 semaphore caps how many run at once (`max_parallel`).
+
+Two companion tools let the main agent manage background fixes:
+
+- **`fix_peb_list`** — list running and finished jobs with their status,
+  worktree, subagent summary, and resulting commit change ids.
+- **`fix_peb_kill`** — abort a running subagent by peb id (SIGTERM); its
+  workspace is torn down and a failure notification is delivered.
 
 Static configuration lives in `.pi/fix-peb.json` (project-local, discovered by
 walking up from the working directory; merged over
