@@ -9,9 +9,10 @@
       "@earendil-works/pi-coding-agent": ["./node_modules/@earendil-works/pi-coding-agent"],
       "@earendil-works/pi-ai": ["./node_modules/@earendil-works/pi-ai"],
       "@earendil-works/pi-tui": ["./node_modules/@earendil-works/pi-tui"],
+      "@opencode-ai/plugin": ["./node_modules/@opencode-ai/plugin/dist/index.d.ts"],
       "typebox": ["./node_modules/typebox"]
     },
-    "types": ["node"],
+    "types": ["node", "bun"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
@@ -19,5 +20,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["../../internal/config/data/pebbles-pi.ts"]
+  "include": [
+    "../../internal/config/data/pebbles-pi.ts",
+    "../../internal/config/data/pebbles.ts"
+  ]
 }

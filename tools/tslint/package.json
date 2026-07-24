@@ -1,7 +1,7 @@
 {
   "name": "pebbles-tslint",
   "private": true,
-  "description": "TypeScript typecheck for the generated pi extension (internal/config/data/pebbles-pi.ts). Not a published package; exists only so tsc can resolve the pi SDK imports.",
+  "description": "TypeScript typecheck for the generated typescript extensions (internal/config/data/*.ts). Not a published package; exists only so tsc can resolve the pi SDK and opencode plugin imports.",
   "scripts": {
     "lint": "tsc --noEmit -p tsconfig.json"
   },
@@ -9,6 +9,8 @@
     "@earendil-works/pi-coding-agent": "^0.82.0",
     "@earendil-works/pi-ai": "^0.82.0",
     "@earendil-works/pi-tui": "^0.82.0",
+    "@opencode-ai/plugin": "1.18.4",
+    "@types/bun": "1.3.14",
     "@types/node": "24.12.4",
     "typebox": "1.1.38",
     "typescript": "5.9.3"

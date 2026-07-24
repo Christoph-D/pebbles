@@ -48,7 +48,7 @@ deps:
 	go mod download
 
 lint-ts: tools/tslint/node_modules/.package-lock.json
-	@echo "Typechecking TypeScript (pebbles-pi.ts)..."
+	@echo "Typechecking TypeScript..."
 	cd tools/tslint && npx tsc --noEmit -p tsconfig.json
 
 tools/tslint/node_modules/.package-lock.json: tools/tslint/package.json tools/tslint/package-lock.json
@@ -66,5 +66,5 @@ help:
 	@echo "  generate       - Run go generate"
 	@echo "  mod-tidy       - Tidy go.mod"
 	@echo "  deps           - Download dependencies"
-	@echo "  lint-ts        - Typecheck the generated pi extension (pebbles-pi.ts)"
+	@echo "  lint-ts        - Typecheck the generated TypeScript extensions"
 	@echo "  help           - Show this help message"
