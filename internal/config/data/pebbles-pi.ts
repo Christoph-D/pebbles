@@ -4,9 +4,10 @@
 //
 // Changes to this file will be overwritten when you run `peb`.
 // If this file is not located in .pi/extensions/, it's safe to modify.
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { spawn, spawnSync } from "node:child_process";
 import * as os from "node:os";
@@ -323,6 +324,102 @@ function runSubagent(opts: {
 	});
 }
 
+// ----------------------------------------------------------------------------
+// Tool result rendering
+//
+// peb tools return plain text. Without a renderer the TUI's fallback always
+// shows the full output and ignores the global ctrl+o (app.tools.expand)
+// toggle. renderPebResult honors that toggle like pi's built-in tools:
+// collapsed shows a compact one-line summary, expanded shows the full output.
+// ----------------------------------------------------------------------------
+
+const PEB_SUMMARY_MAX_CHARS = 100;
+
+/** Parse text as a single JSON value or newline-delimited JSON objects. */
+function tryParsePebJson(text: string): unknown[] | null {
+	try {
+		const v = JSON.parse(text);
+		return Array.isArray(v) ? v : [v];
+	} catch {
+		// not a single JSON value; try newline-delimited JSON below
+	}
+	const objs: unknown[] = [];
+	for (const line of text.split("\n")) {
+		const s = line.trim();
+		if (!s) continue;
+		try {
+			objs.push(JSON.parse(s));
+		} catch {
+			return null;
+		}
+	}
+	return objs.length ? objs : null;
+}
+
+/** Build a compact one-line summary of a peb tool's text output. */
+function summarizePebOutput(text: string): string {
+	const trimmed = text.trim();
+	const objs = tryParsePebJson(trimmed);
+	if (objs) {
+		const ids: string[] = [];
+		const titles: string[] = [];
+		for (const o of objs) {
+			if (o && typeof o === "object") {
+				const rec = o as Record<string, unknown>;
+				if (typeof rec.id === "string") ids.push(rec.id);
+				if (typeof rec.title === "string") titles.push(rec.title);
+			}
+		}
+		if (ids.length === 1) return titles[0] ? `${ids[0]}: ${titles[0]}` : ids[0];
+		if (ids.length > 1) return `${ids.length} pebs: ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? " …" : ""}`;
+	}
+	// Plain text: first line that isn't just punctuation/whitespace.
+	const meaningful = trimmed
+		.split("\n")
+		.map((l) => l.trim())
+		.find((l) => l && !/^[{}\[\],\s]*$/.test(l));
+	return meaningful ?? trimmed.split("\n")[0] ?? "";
+}
+
+/** Collapse to one line and cap length for the collapsed view. */
+function truncateForSummary(s: string): string {
+	const one = s.replace(/\s+/g, " ").trim();
+	return one.length > PEB_SUMMARY_MAX_CHARS ? one.slice(0, PEB_SUMMARY_MAX_CHARS - 1) + " …" : one;
+}
+
+/**
+ * Render a peb tool result for the TUI, honoring the ctrl+o expand toggle.
+ * Collapsed shows a compact summary (+ line count when multi-line); expanded
+ * shows the full text output. Mirrors how pi's built-in tools behave.
+ */
+function renderPebResult(
+	result: { content: Array<{ type: string; text?: string }> },
+	options: { expanded: boolean; isPartial: boolean },
+	theme: Theme,
+): Text {
+	const text = (result.content ?? [])
+		.filter((c) => c.type === "text")
+		.map((c) => c.text ?? "")
+		.join("\n")
+		.trim();
+
+	if (!text) {
+		return new Text(theme.fg("dim", options.isPartial ? "running…" : "(no output)"), 0, 0);
+	}
+
+	const isError = /^error:/i.test(text);
+	const color = isError ? "error" : "toolOutput";
+
+	if (options.expanded) {
+		return new Text(theme.fg(color, text), 0, 0);
+	}
+
+	const lineCount = text.split("\n").length;
+	const summary = truncateForSummary(summarizePebOutput(text));
+	const hint = lineCount > 1 ? theme.fg("muted", ` (${lineCount} lines)`) : "";
+	return new Text(theme.fg(color, summary) + hint, 0, 0);
+}
+
 export default async function (pi: ExtensionAPI) {
 	// Load the prime prompt and config once at startup. If `peb` is not on PATH
 	// or this isn't a pebbles project, the extension stays inert.
@@ -389,6 +486,7 @@ export default async function (pi: ExtensionAPI) {
 			const text = pebOutput(["new"], JSON.stringify(json));
 			return { content: [{ type: "text", text }] };
 		},
+		renderResult: renderPebResult,
 	});
 
 	pi.registerTool({
@@ -404,6 +502,7 @@ export default async function (pi: ExtensionAPI) {
 			const text = pebOutput(["read", ...params.id]);
 			return { content: [{ type: "text", text }] };
 		},
+		renderResult: renderPebResult,
 	});
 
 	pi.registerTool({
@@ -441,6 +540,7 @@ export default async function (pi: ExtensionAPI) {
 			const text = pebOutput(["update", params.id, JSON.stringify(json)]);
 			return { content: [{ type: "text", text }] };
 		},
+		renderResult: renderPebResult,
 	});
 
 	pi.registerTool({
@@ -466,6 +566,7 @@ export default async function (pi: ExtensionAPI) {
 			const text = pebOutput(args);
 			return { content: [{ type: "text", text }] };
 		},
+		renderResult: renderPebResult,
 	});
 
 	pi.registerTool({
@@ -481,6 +582,7 @@ export default async function (pi: ExtensionAPI) {
 			const text = pebOutput(["delete", ...params.id]);
 			return { content: [{ type: "text", text }] };
 		},
+		renderResult: renderPebResult,
 	});
 
 	// ---- fix_peb: delegate fixing one peb to an isolated subagent in a jj worktree ----
@@ -656,5 +758,6 @@ export default async function (pi: ExtensionAPI) {
 				fixPebSem.release();
 			}
 		},
+		renderResult: renderPebResult,
 	});
 }
