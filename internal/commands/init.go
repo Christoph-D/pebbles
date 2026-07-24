@@ -17,6 +17,10 @@ func InitCommand() *cli.Command {
 				Name:  "opencode",
 				Usage: "Install or update opencode MCP plugin (overwrites existing plugin file)",
 			},
+			&cli.BoolFlag{
+				Name:  "pi",
+				Usage: "Install or update pi agent extension (overwrites existing extension file)",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			dir := ".pebbles"
@@ -46,6 +50,13 @@ func InitCommand() *cli.Command {
 					return fmt.Errorf("failed to install opencode plugin: %w", err)
 				}
 				fmt.Println("Installed opencode MCP plugin")
+			}
+
+			if c.Bool("pi") {
+				if err := config.InstallPiExtension(cfg); err != nil {
+					return fmt.Errorf("failed to install pi extension: %w", err)
+				}
+				fmt.Println("Installed pi agent extension")
 			}
 
 			return nil

@@ -234,3 +234,89 @@ func TestInitCommandWithOpencodeIdempotent(t *testing.T) {
 		t.Fatalf("pebbles.ts was modified on second init")
 	}
 }
+
+func TestInitCommandWithPi(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Chdir(tmpDir)
+
+	app := &cli.App{
+		Commands: []*cli.Command{InitCommand()},
+	}
+
+	_, w, _ := os.Pipe()
+	oldStdout := os.Stdout
+	os.Stdout = w
+
+	err := app.Run([]string{"peb", "init", "--pi"})
+	if err != nil {
+		w.Close()
+		os.Stdout = oldStdout
+		t.Fatalf("init with --pi failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	extDir := filepath.Join(".pi", "extensions")
+	if _, err := os.Stat(extDir); os.IsNotExist(err) {
+		t.Fatalf(".pi/extensions/ directory was not created")
+	}
+
+	extPath := filepath.Join(extDir, "pebbles.ts")
+	content, err := os.ReadFile(extPath)
+	if err != nil {
+		t.Fatalf("failed to read pi extension: %v", err)
+	}
+
+	if !strings.Contains(string(content), "registerTool") {
+		t.Errorf("pi extension does not contain registerTool call")
+	}
+	if !strings.HasPrefix(string(content), "// Version ") {
+		t.Errorf("pi extension should start with a version comment")
+	}
+
+	// Installing pi must not create an opencode plugin.
+	opencodePath := filepath.Join(".opencode", "plugin", "pebbles.ts")
+	if _, err := os.Stat(opencodePath); !os.IsNotExist(err) {
+		t.Errorf("init --pi should not create an opencode plugin")
+	}
+}
+
+func TestInitCommandWithPiIdempotent(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Chdir(tmpDir)
+
+	extPath := filepath.Join(".pi", "extensions", "pebbles.ts")
+
+	app := &cli.App{
+		Commands: []*cli.Command{InitCommand()},
+	}
+
+	run := func() {
+		_, w, _ := os.Pipe()
+		oldStdout := os.Stdout
+		os.Stdout = w
+		err := app.Run([]string{"peb", "init", "--pi"})
+		w.Close()
+		os.Stdout = oldStdout
+		if err != nil {
+			t.Fatalf("init --pi failed: %v", err)
+		}
+	}
+
+	run()
+	content1, err := os.ReadFile(extPath)
+	if err != nil {
+		t.Fatalf("failed to read pi extension after first init: %v", err)
+	}
+
+	run()
+	content2, err := os.ReadFile(extPath)
+	if err != nil {
+		t.Fatalf("failed to read pi extension after second init: %v", err)
+	}
+
+	if string(content1) != string(content2) {
+		t.Fatalf("pi extension changed on second init")
+	}
+}

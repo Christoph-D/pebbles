@@ -36,16 +36,15 @@ go install go.yozora.eu/pebbles/cmd/peb@latest
 Then run in your project directory:
 
 ```bash
-peb init [--opencode]
+peb init [--opencode] [--pi]
 ```
 
 This creates a `.pebbles/` directory with a config file, optionally with an
-opencode plugin. Edit the config file as needed.
+opencode plugin and/or a pi agent extension. Edit the config file as needed.
 
 ## Opencode Integration
 
-If you use opencode, it's highly recommended to install the opencode plugin,
-which provides:
+If you use opencode, install the opencode plugin, which provides:
 
 - **Agent Instructions** to teach the agent how to use pebbles
 - **MCP Server** with tools for each peb command
@@ -64,6 +63,31 @@ stays in sync with the installed `peb` binary.
 
 To disable the auto update of the opencode plugin, remove the "Version" string
 from the first line of `.opencode/plugin/pebbles.ts`.
+
+## Pi Integration
+
+If you use [pi](https://github.com/earendil-works/pi-coding-agent), install the
+pi extension, which provides:
+
+- **Agent Instructions** (the pebbles "prime" prompt) injected into the system
+  prompt on every turn
+- **Tools** for each peb command (`peb_new`, `peb_read`, `peb_update`,
+  `peb_query`, `peb_delete`) that the agent can call directly
+
+### Setup
+
+Run `peb init --pi` to install the extension to `.pi/extensions/pebbles.ts`.
+This command does not override your main pebbles config if it already exists.
+
+### Automatic Updates
+
+The extension file in the project directory is automatically updated when
+running any `peb` command if a newer version is available, just like the
+opencode plugin. This ensures that the extension stays in sync with the
+installed `peb` binary.
+
+To disable the auto update of the pi extension, remove the "Version" string from
+the first line of `.pi/extensions/pebbles.ts`.
 
 ## Using Pebbles with Coding Agents
 
@@ -86,6 +110,12 @@ Agent: I'll create a task for this and start working on it.
 Task peb-xyz1 marked as fixed!
 ```
 
+### Pi Agent Workflow
+
+With the extension installed, pi agents use peb automatically to track their
+work. The pebbles instructions are injected into the system prompt, and the
+`peb_*` tools are available for the agent to call.
+
 ### Other Coding Agents
 
 Pebbles works with any coding agent that supports running shell commands. Show
@@ -95,11 +125,12 @@ your agent the output of `peb prime` to teach it how to use pebbles.
 
 ### Human Commands
 
-#### `peb init [--opencode]`
+#### `peb init [--opencode] [--pi]`
 
 Initialize pebbles in current directory (creates `.pebbles/`). With `--opencode`
 flag, also installs the opencode MCP plugin (creates
-`.opencode/plugin/pebbles.ts`)
+`.opencode/plugin/pebbles.ts`). With `--pi` flag, also installs the pi agent
+extension (creates `.pi/extensions/pebbles.ts`).
 
 #### `peb cleanup`
 
@@ -108,14 +139,15 @@ Delete all closed pebs (permanently removes pebs with status `fixed` or
 
 #### `peb config`
 
-Display the current pebbles configuration as JSON. This command is primarily used
-by the opencode plugin to dynamically load configuration at runtime.
+Display the current pebbles configuration as JSON. This command is primarily
+used by the opencode plugin to dynamically load configuration at runtime.
 
 ```bash
 peb config
 ```
 
 Output example:
+
 ```json
 {
   "prefix": "peb",
