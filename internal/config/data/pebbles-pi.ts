@@ -5,7 +5,7 @@
 // Changes to this file will be overwritten when you run `peb`.
 // If this file is not located in .pi/extensions/, it's safe to modify.
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -105,23 +105,32 @@ interface SubagentResult {
 	model?: string;
 }
 
-/** Walk up from `cwd` to find the nearest `.pi/fix-peb.json`. */
-function findProjectFixPebConfig(cwd: string): string | null {
-	let dir = cwd;
-	while (true) {
-		const candidate = path.join(dir, ".pi", "fix-peb.json");
-		try {
-			if (fs.statSync(candidate).isFile()) return candidate;
-		} catch {
-			// not present at this level
-		}
-		const parent = path.dirname(dir);
-		if (parent === dir) return null;
-		dir = parent;
-	}
-}
-
-/** Merge user-global then project-local fix-peb config over the defaults. */
+/**
+ * Read fix_peb configuration from the "pebbles.fixPeb" key of pi's settings.
+ *
+ * Pi settings live in two JSON files, with the project file overriding the
+ * global one (matching pi's own nested-merge semantics):
+ *   - global:  <agentDir>/settings.json              (e.g. ~/.pi/agent/settings.json)
+ *   - project: <cwd>/<CONFIG_DIR_NAME>/settings.json (e.g. .pi/settings.json)
+ *
+ * Only the `pebbles.fixPeb` sub-object is consumed, e.g.:
+ *
+ *   {
+ *     "pebbles": {
+ *       "fixPeb": {
+ *         "baseRevset": "main",
+ *         "worktreeInit": "cd \"$1\" && pnpm install",
+ *         "subagentModel": "anthropic/claude-sonnet-4-5",
+ *         "commitMessage": "fix: {title} ({id})",
+ *         "timeoutMs": 1800000,
+ *         "maxParallel": 4
+ *       }
+ *     }
+ *   }
+ *
+ * Missing files and malformed JSON are ignored, so the defaults always apply
+ * unless a well-formed value overrides them.
+ */
 function loadFixPebConfig(cwd: string, agentDir: string): FixPebConfig {
 	const merged: FixPebConfig = { ...DEFAULT_FIX_PEB_CONFIG };
 	const readInto = (file: string) => {
@@ -131,22 +140,23 @@ function loadFixPebConfig(cwd: string, agentDir: string): FixPebConfig {
 		} catch {
 			return;
 		}
-		let obj: Record<string, unknown>;
+		let obj: any;
 		try {
 			obj = JSON.parse(raw);
 		} catch {
 			return; // malformed; ignore
 		}
-		if (typeof obj["base_revset"] === "string") merged.baseRevset = obj["base_revset"];
-		if (typeof obj["worktree_init"] === "string") merged.worktreeInit = obj["worktree_init"];
-		if (typeof obj["subagent_model"] === "string") merged.subagentModel = obj["subagent_model"];
-		if (typeof obj["commit_message"] === "string") merged.commitMessage = obj["commit_message"];
-		if (typeof obj["timeout_ms"] === "number") merged.timeoutMs = obj["timeout_ms"];
-		if (typeof obj["max_parallel"] === "number") merged.maxParallel = Math.max(1, Math.floor(obj["max_parallel"]));
+		const fp = obj?.pebbles?.fixPeb;
+		if (!fp || typeof fp !== "object") return;
+		if (typeof fp.baseRevset === "string") merged.baseRevset = fp.baseRevset;
+		if (typeof fp.worktreeInit === "string") merged.worktreeInit = fp.worktreeInit;
+		if (typeof fp.subagentModel === "string") merged.subagentModel = fp.subagentModel;
+		if (typeof fp.commitMessage === "string") merged.commitMessage = fp.commitMessage;
+		if (typeof fp.timeoutMs === "number") merged.timeoutMs = fp.timeoutMs;
+		if (typeof fp.maxParallel === "number") merged.maxParallel = Math.max(1, Math.floor(fp.maxParallel));
 	};
-	readInto(path.join(agentDir, "fix-peb.json"));
-	const projectPath = findProjectFixPebConfig(cwd);
-	if (projectPath) readInto(projectPath);
+	readInto(path.join(agentDir, "settings.json"));
+	readInto(path.join(cwd, CONFIG_DIR_NAME, "settings.json"));
 	return merged;
 }
 
