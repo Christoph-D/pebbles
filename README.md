@@ -100,6 +100,9 @@ to an **isolated background subagent**. `fix_peb` does **not** block the main
 agent's turn — it returns immediately after starting the subagent, so the main
 agent stays responsive and can keep chatting or launch more fixes.
 
+Because `fix_peb` works by creating an isolated jj worktree, it **only works
+inside [jj repositories](https://docs.jj-vcs.dev/)**.
+
 When called, the tool:
 
 1. Reads the peb.
@@ -110,11 +113,9 @@ When called, the tool:
 4. Spawns a subagent (no extensions) that fixes the peb and commits its work
    with `jj commit -m "<message>"`.
 5. Returns immediately with a job id.
-6. When the subagent finishes (**success or failure**), the main agent is
-   notified via a message that includes the resulting jj change ids; the
-   worktree is then forgotten and removed. (jj keeps the commits reachable after
-   the workspace is forgotten, and the change ids are reported so the main agent
-   can find them. Nothing is merged or pushed.)
+6. When the subagent finishes (success or failure), the main agent is notified
+   via a message that includes the resulting jj change ids; the worktree is then
+   forgotten and removed.
 
 The main agent may call `fix_peb` several times in one turn to fix multiple pebs
 in parallel; each runs in its own isolated worktree and a process-wide semaphore

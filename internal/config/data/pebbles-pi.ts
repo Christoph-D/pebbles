@@ -667,6 +667,28 @@ export default async function (pi: ExtensionAPI) {
 	const fixPebSem = new Semaphore(fixPebConfig.maxParallel);
 	const jj = (args: string[], opts: { cwd: string }) => pi.exec("jj", args, opts);
 
+	/** Verify cwd is inside a jj repository; throw a helpful error otherwise.
+	 *  fix_peb relies on jj worktrees, so it only works in jj repositories. */
+	const requireJjRepo = async (cwd: string): Promise<void> => {
+		let res: Awaited<ReturnType<typeof jj>>;
+		try {
+			res = await jj(["root"], { cwd });
+		} catch (e) {
+			throw new Error(
+				`fix_peb only works in jj repositories, but jj could not be run (${(e as Error).message}). ` +
+					`Install jj — see https://docs.jj-vcs.dev/.`,
+			);
+		}
+		if (res.code !== 0) {
+			const detail = (res.stderr || res.stdout || "").trim();
+			throw new Error(
+				`fix_peb only works in jj repositories, but this does not appear to be one` +
+					(detail ? `: ${detail}` : "") +
+				`. See https://docs.jj-vcs.dev/ to get started.`,
+			);
+		}
+	};
+
 	/** Build the one-shot completion notification and wake the main agent.
 	 *  Called exactly once per job, only on finish (success or failure). */
 	const notifyFixComplete = (job: FixJob, sub: SubagentResult) => {
@@ -762,6 +784,10 @@ export default async function (pi: ExtensionAPI) {
 					`A fix is already running for ${pebId}. Use fix_peb_list to monitor it or fix_peb_kill to stop it before starting another.`,
 				);
 			}
+
+			// fix_peb works by creating jj worktrees, so it only works inside jj
+			// repositories. Fail fast with an actionable error before doing anything.
+			await requireJjRepo(ctx.cwd);
 
 			const emit = (text: string) => {
 				onUpdate?.({ content: [{ type: "text", text }] });
