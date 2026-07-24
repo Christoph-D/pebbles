@@ -1,4 +1,4 @@
-.PHONY: build test clean install fmt vet generate help
+.PHONY: build test clean install fmt vet generate help lint-ts
 
 BINARY_NAME=peb
 BUILD_DIR=bin
@@ -47,6 +47,13 @@ deps:
 	@echo "Downloading dependencies..."
 	go mod download
 
+lint-ts: tools/tslint/node_modules/.package-lock.json
+	@echo "Typechecking TypeScript (pebbles-pi.ts)..."
+	cd tools/tslint && npx tsc --noEmit -p tsconfig.json
+
+tools/tslint/node_modules/.package-lock.json: tools/tslint/package.json tools/tslint/package-lock.json
+	cd tools/tslint && npm ci --no-fund --no-audit
+
 help:
 	@echo "Available targets:"
 	@echo "  build          - Build the binary"
@@ -59,4 +66,5 @@ help:
 	@echo "  generate       - Run go generate"
 	@echo "  mod-tidy       - Tidy go.mod"
 	@echo "  deps           - Download dependencies"
+	@echo "  lint-ts        - Typecheck the generated pi extension (pebbles-pi.ts)"
 	@echo "  help           - Show this help message"

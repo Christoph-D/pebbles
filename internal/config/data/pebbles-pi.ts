@@ -213,7 +213,7 @@ function buildFixPrompt(
 	return lines.join("\n");
 }
 
-function tryKill(proc: { kill: (sig?: string) => boolean }, sig: string) {
+function tryKill(proc: { kill: (signal?: NodeJS.Signals | number) => boolean }, sig: NodeJS.Signals) {
 	try {
 		proc.kill(sig);
 	} catch {
@@ -561,7 +561,7 @@ export default async function (pi: ExtensionAPI) {
 			if (params.type) json.type = params.type;
 			if (params.blocked_by) json["blocked-by"] = params.blocked_by;
 			const text = pebOutput(["new"], JSON.stringify(json));
-			return { content: [{ type: "text", text }] };
+			return { content: [{ type: "text", text }], details: undefined };
 		},
 		renderResult: renderPebResult,
 	});
@@ -577,7 +577,7 @@ export default async function (pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params) {
 			const text = pebOutput(["read", ...params.id]);
-			return { content: [{ type: "text", text }] };
+			return { content: [{ type: "text", text }], details: undefined };
 		},
 		renderResult: renderPebResult,
 	});
@@ -615,7 +615,7 @@ export default async function (pi: ExtensionAPI) {
 			if (params.type) json.type = params.type;
 			if (params.blocked_by) json["blocked-by"] = params.blocked_by;
 			const text = pebOutput(["update", params.id, JSON.stringify(json)]);
-			return { content: [{ type: "text", text }] };
+			return { content: [{ type: "text", text }], details: undefined };
 		},
 		renderResult: renderPebResult,
 	});
@@ -641,7 +641,7 @@ export default async function (pi: ExtensionAPI) {
 			if (params.fields) args.push("--fields", params.fields.join(","));
 			if (params.filters) args.push(...params.filters);
 			const text = pebOutput(args);
-			return { content: [{ type: "text", text }] };
+			return { content: [{ type: "text", text }], details: undefined };
 		},
 		renderResult: renderPebResult,
 	});
@@ -657,7 +657,7 @@ export default async function (pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params) {
 			const text = pebOutput(["delete", ...params.id]);
-			return { content: [{ type: "text", text }] };
+			return { content: [{ type: "text", text }], details: undefined };
 		},
 		renderResult: renderPebResult,
 	});
@@ -790,7 +790,7 @@ export default async function (pi: ExtensionAPI) {
 			await requireJjRepo(ctx.cwd);
 
 			const emit = (text: string) => {
-				onUpdate?.({ content: [{ type: "text", text }] });
+				onUpdate?.({ content: [{ type: "text", text }], details: undefined });
 			};
 
 			await fixPebSem.acquire();
@@ -1007,6 +1007,7 @@ export default async function (pi: ExtensionAPI) {
 						text: jobs.length ? JSON.stringify(jobs, null, 2) : "No fix_peb jobs. Use fix_peb to start one.",
 					},
 				],
+				details: undefined,
 			};
 		},
 		renderResult: renderPebResult,
@@ -1041,6 +1042,7 @@ export default async function (pi: ExtensionAPI) {
 						text: `Sent SIGTERM to the subagent for ${pebId}. It will be torn down and a failure notification will follow when it exits.`,
 					},
 				],
+				details: undefined,
 			};
 		},
 		renderResult: renderPebResult,

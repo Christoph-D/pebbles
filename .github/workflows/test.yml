@@ -21,3 +21,13 @@ jobs:
 
     - name: Run tests
       run: make test
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: npm
+        cache-dependency-path: tools/tslint/package-lock.json
+
+    - name: Typecheck TypeScript
+      run: make lint-ts

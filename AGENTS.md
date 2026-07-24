@@ -14,6 +14,7 @@ The project uses a Makefile for common development tasks:
 - `make vet` - Run go vet for static analysis
 - `make mod-tidy` - Tidy go.mod dependencies
 - `make deps` - Download dependencies
+- `make lint-ts` - Typecheck the generated pi extension (`internal/config/data/pebbles-pi.ts`) with `tsc` (requires npm; installs deps into `tools/tslint/node_modules`)
 - `make help` - Show all available targets
 
 ## Running the Binary
