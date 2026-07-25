@@ -101,7 +101,7 @@ interface FixPebConfig {
 }
 
 const DEFAULT_FIX_PEB_CONFIG: FixPebConfig = {
-	baseRevset: "main",
+	baseRevset: "parents(@)",
 	worktreeInit: null,
 	subagentModel: null,
 	commitMessage: "<message>",
@@ -141,7 +141,7 @@ interface SubagentResult {
  *   {
  *     "pebbles": {
  *       "fixPeb": {
- *         "baseRevset": "main",
+ *         "baseRevset": "parents(@)",
  *         "worktreeInit": "cd \"$1\" && pnpm install",
  *         "subagentModel": "anthropic/claude-sonnet-4-5",
  *         "commitMessage": "fix: {title} ({id})",
@@ -795,7 +795,7 @@ export default async function (pi: ExtensionAPI) {
 			"After a successful fix, rebase the new commits before your working copy with `jj rebase --source <first-change-id> --insert-before @` (only the first change id is needed — --source rebases it and all descendants) to pull the subagent's work into the main repo.",
 		],
 		description: [
-			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
+			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'parents(@)'), optionally runs a worktree-init script, spawns a subagent that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
 			`Arguments: peb_id (e.g., ${pebbleIDPattern}), optional extra_prompt appended to the subagent instructions.`,
 			"CANNOT be used on a peb that has open blockers: every peb in its `blocked-by` list must be fixed (or closed) first.",
 			`Concurrency: at most ${fixPebConfig.maxParallel} background fix_peb job(s) may run at once; if you need to launch more, wait for completion of previous jobs.`,

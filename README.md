@@ -139,7 +139,7 @@ the project file overriding the global one and nested objects merged:
 {
   "pebbles": {
     "fixPeb": {
-      "baseRevset": "main",
+      "baseRevset": "parents(@)",
       "worktreeInit": "cd \"$1\" && pnpm install",
       "subagentModel": "provider/model",
       "commitMessage": "fix: {title} ({id})",
@@ -154,7 +154,7 @@ All fields are optional; anything you omit keeps its default.
 
 | Field           | Default           | Description                                                                                                                                                                                          |
 | --------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `baseRevset`    | `"main"`          | jj revset the worktree is branched from.                                                                                                                                                             |
+| `baseRevset`    | `"parents(@)"`    | jj revset the worktree is branched from.                                                                                                                                                             |
 | `worktreeInit`  | _(none)_          | Shell script run after creating the worktree. It runs in the main repository's working directory and receives the worktree path as `$1` (for example `ln -s "$PWD/node_modules" "$1/node_modules"`). |
 | `subagentModel` | _(current model)_ | `provider/id` for the subagent. When unset, the subagent uses the main agent's currently selected model.                                                                                             |
 | `commitMessage` | `"<message>"`     | Commit-message template; `{id}` and `{title}` are substituted from the peb and sanitized to a single, shell-safe line.                                                                               |
