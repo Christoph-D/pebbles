@@ -160,24 +160,30 @@ function loadFixPebConfig(cwd: string, agentDir: string): FixPebConfig {
 	return merged;
 }
 
-/** Simple async semaphore to cap concurrent subagents across fix_peb calls. */
+/** Simple counter to cap concurrent subagents across fix_peb calls.
+ *
+ *  Unlike an async semaphore, this does NOT queue: when the limit is hit
+ *  `tryAcquire` returns false and fix_peb errors out, so the main model
+ *  learns about the limit and can retry later rather than blocking. */
 class Semaphore {
 	private available: number;
-	private readonly waiters: Array<() => void> = [];
-	constructor(max: number) {
+	constructor(private readonly max: number) {
 		this.available = max;
 	}
-	acquire(): Promise<void> {
+	/** Take a slot if one is free. Returns true on success, false at capacity. */
+	tryAcquire(): boolean {
 		if (this.available > 0) {
 			this.available--;
-			return Promise.resolve();
+			return true;
 		}
-		return new Promise<void>((resolve) => this.waiters.push(resolve));
+		return false;
 	}
 	release(): void {
-		const next = this.waiters.shift();
-		if (next) next();
-		else this.available++;
+		if (this.available < this.max) this.available++;
+	}
+	/** How many slots are currently held. */
+	get running(): number {
+		return this.max - this.available;
 	}
 }
 
@@ -793,7 +799,14 @@ export default async function (pi: ExtensionAPI) {
 				onUpdate?.({ content: [{ type: "text", text }], details: undefined });
 			};
 
-			await fixPebSem.acquire();
+			if (!fixPebSem.tryAcquire()) {
+				throw new Error(
+					`fix_peb concurrency limit reached: at most ${fixPebConfig.maxParallel} background fix_peb job(s) ` +
+						`may run at once and all ${fixPebConfig.maxParallel} slot(s) are currently in use ` +
+						`(${fixPebSem.running} running). ` +
+						`Wait for a running job to complete — you will receive a notification when one finishes, then retry.`,
+				);
+			}
 			let tmpDir = "";
 			let workspaceName = "";
 			let worktreePath = "";
