@@ -980,8 +980,6 @@ export default async function (pi: ExtensionAPI) {
 
 						const failed = sub.code !== 0 || sub.stopReason === "error" || sub.stopReason === "aborted";
 						job.status = failed ? "failed" : "succeeded";
-
-						await teardownJob(job);
 					} finally {
 						fixPebSem.release();
 						if (!sessionShuttingDown) {
@@ -991,6 +989,7 @@ export default async function (pi: ExtensionAPI) {
 								// ignore — notification is best-effort
 							}
 						}
+						await teardownJob(job);
 					}
 				});
 
