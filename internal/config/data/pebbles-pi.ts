@@ -114,6 +114,7 @@ interface UsageStats {
 	output: number;
 	cacheRead: number;
 	cacheWrite: number;
+	/** Accumulated API cost in US dollars (pi's usage.cost.total summed over turns). */
 	cost: number;
 }
 
@@ -376,6 +377,7 @@ interface FixJob {
 	changeIds: string[];
 	stopReason?: string;
 	errorMessage?: string;
+	cost?: number;
 }
 
 /** Registry of background fix_peb jobs, keyed by peb id (one job per peb at a time). */
@@ -947,6 +949,7 @@ export default async function (pi: ExtensionAPI) {
 						if (r.model && !job.model) job.model = r.model;
 						if (r.stopReason) job.stopReason = r.stopReason;
 						if (r.errorMessage) job.errorMessage = job.errorMessage || r.errorMessage;
+						if (r.usage.cost) job.cost = r.usage.cost;
 					},
 				});
 				job.proc = proc;
@@ -961,6 +964,7 @@ export default async function (pi: ExtensionAPI) {
 						job.stopReason = sub.stopReason;
 						job.errorMessage = job.errorMessage || sub.errorMessage;
 						job.proc = undefined;
+						if (sub.usage.cost) job.cost = sub.usage.cost;
 
 						// Capture new commit change ids before forgetting the workspace.
 						if (anchorId) {
@@ -1043,22 +1047,28 @@ export default async function (pi: ExtensionAPI) {
 			"List background fix_peb jobs (running and finished) with their status, worktree, subagent summary, and resulting commit change ids. Does not block.",
 		parameters: Type.Object({}),
 		async execute() {
-			const jobs = Array.from(fixJobs.values()).map((j) => ({
-				pebId: j.pebId,
-				title: j.title,
-				type: j.type,
-				status: j.status,
-				workspace: j.workspace,
-				worktree: j.worktree,
-				baseRevset: j.baseRevset,
-				model: j.model,
-				startedAt: j.startedAt,
-				turns: j.turns,
-				summary: j.summary,
-				changeIds: j.changeIds,
-				stopReason: j.stopReason,
-				errorMessage: j.errorMessage,
-			}));
+			const jobs = Array.from(fixJobs.values()).map((j) => {
+				const entry: Record<string, unknown> = {
+					pebId: j.pebId,
+					title: j.title,
+					type: j.type,
+					status: j.status,
+					workspace: j.workspace,
+					worktree: j.worktree,
+					baseRevset: j.baseRevset,
+					model: j.model,
+					startedAt: j.startedAt,
+					turns: j.turns,
+					summary: j.summary,
+					changeIds: j.changeIds,
+					stopReason: j.stopReason,
+					errorMessage: j.errorMessage,
+				};
+				// Surface accumulated cost only when non-zero, so brand-new jobs
+				// (no API calls yet, or cost unavailable for the model) stay quiet.
+				if (j.cost) entry.costUsd = j.cost;
+				return entry;
+			});
 			return {
 				content: [
 					{
