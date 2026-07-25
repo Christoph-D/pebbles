@@ -1,4 +1,4 @@
-// Version 20260724T222030Z-839b70b
+// Version 20260725T221430Z-2271226
 //
 // IMPORTANT: **This file in .pi/extensions/ is auto-generated**
 //
@@ -64,6 +64,29 @@ function pebJson(args: string[], stdin?: string): any {
 	return Array.isArray(parsed) ? parsed[0] : parsed;
 }
 
+/**
+ * Return the ids of `blockers` that are still open (status `new` or
+ * `in-progress`), via a single `peb query 'id:(...)' 'status:open'` lookup.
+ * Returns [] when there are no open blockers (or the list is empty).
+ */
+function openBlockerIds(blockers: string[]): string[] {
+	const ids = blockers.filter((b) => typeof b === "string" && b.trim() !== "");
+	if (!ids.length) return [];
+	const res = runPeb(["query", `id:(${ids.join("|")})`, "status:open"]);
+	const open: string[] = [];
+	for (const line of (res.stdout || "").split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed) continue;
+		try {
+			const p = JSON.parse(trimmed);
+			if (p && typeof p.id === "string") open.push(p.id);
+		} catch {
+			// ignore non-JSON lines (e.g. trailing whitespace)
+		}
+	}
+	return open;
+}
+
 // ----------------------------------------------------------------------------
 // fix_peb: delegate fixing a single peb to an isolated subagent in a jj worktree
 // ----------------------------------------------------------------------------
@@ -78,7 +101,7 @@ interface FixPebConfig {
 }
 
 const DEFAULT_FIX_PEB_CONFIG: FixPebConfig = {
-	baseRevset: "main",
+	baseRevset: "parents(@)",
 	worktreeInit: null,
 	subagentModel: null,
 	commitMessage: "<message>",
@@ -91,6 +114,7 @@ interface UsageStats {
 	output: number;
 	cacheRead: number;
 	cacheWrite: number;
+	/** Accumulated API cost in US dollars (pi's usage.cost.total summed over turns). */
 	cost: number;
 }
 
@@ -118,7 +142,7 @@ interface SubagentResult {
  *   {
  *     "pebbles": {
  *       "fixPeb": {
- *         "baseRevset": "main",
+ *         "baseRevset": "parents(@)",
  *         "worktreeInit": "cd \"$1\" && pnpm install",
  *         "subagentModel": "anthropic/claude-sonnet-4-5",
  *         "commitMessage": "fix: {title} ({id})",
@@ -160,24 +184,30 @@ function loadFixPebConfig(cwd: string, agentDir: string): FixPebConfig {
 	return merged;
 }
 
-/** Simple async semaphore to cap concurrent subagents across fix_peb calls. */
+/** Simple counter to cap concurrent subagents across fix_peb calls.
+ *
+ *  Unlike an async semaphore, this does NOT queue: when the limit is hit
+ *  `tryAcquire` returns false and fix_peb errors out, so the main model
+ *  learns about the limit and can retry later rather than blocking. */
 class Semaphore {
 	private available: number;
-	private readonly waiters: Array<() => void> = [];
-	constructor(max: number) {
+	constructor(private readonly max: number) {
 		this.available = max;
 	}
-	acquire(): Promise<void> {
+	/** Take a slot if one is free. Returns true on success, false at capacity. */
+	tryAcquire(): boolean {
 		if (this.available > 0) {
 			this.available--;
-			return Promise.resolve();
+			return true;
 		}
-		return new Promise<void>((resolve) => this.waiters.push(resolve));
+		return false;
 	}
 	release(): void {
-		const next = this.waiters.shift();
-		if (next) next();
-		else this.available++;
+		if (this.available < this.max) this.available++;
+	}
+	/** How many slots are currently held. */
+	get running(): number {
+		return this.max - this.available;
 	}
 }
 
@@ -220,6 +250,19 @@ function tryKill(proc: { kill: (signal?: NodeJS.Signals | number) => boolean }, 
 		// ignore
 	}
 }
+
+/** Best-effort `jj util snapshot` in the given directory. */
+function snapshotJj(cwd: string): void {
+	try {
+		spawnSync("jj", ["util", "snapshot"], { cwd });
+	} catch {
+		// best-effort; ignore
+	}
+}
+
+/** Promise-based delay used by the fix_peb completion handler to wait for the
+ *  main agent to become idle before sending its notification. */
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
  *  the child handle and a promise that resolves when the process exits. The
@@ -347,6 +390,7 @@ interface FixJob {
 	changeIds: string[];
 	stopReason?: string;
 	errorMessage?: string;
+	cost?: number;
 }
 
 /** Registry of background fix_peb jobs, keyed by peb id (one job per peb at a time). */
@@ -758,14 +802,18 @@ export default async function (pi: ExtensionAPI) {
 		name: "fix_peb",
 		label: "Peb Fix (background subagent)",
 		promptSnippet: "Delegate fixing one peb to a background subagent in a throwaway jj worktree",
+		// `description` travels via the tool's function schema (read at call-decision
+		// time); `promptGuidelines` are standing bullets in the system prompt. Keep
+		// them disjoint: mechanics + hard runtime constraints here, workflow there.
 		promptGuidelines: [
-			"Use fix_peb to hand off fixing a single peb to an isolated BACKGROUND subagent that works in its own temporary jj worktree and commits with `jj commit`. fix_peb returns immediately (it does NOT block the turn); you will be notified via a message when the subagent finishes (success or failure), including the new commit change ids. Call fix_peb several times in one turn to launch fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. fix_peb does not merge or push anything.",
-			"After a successful fix, the completion message tells you to rebase the new commits before your working copy with `jj rebase --source <first-change-id> --insert-before @` (only the first change id is needed — --source rebases it and all descendants). Run that to pull the subagent's work into the main repo.",
+			"fix_peb runs as a BACKGROUND job: it returns immediately and notifies you when the subagent finishes (success or failure). Launch several in one turn to fix pebs in parallel — use fix_peb_list to monitor jobs and fix_peb_kill to abort one. fix_peb does not merge or push anything.",
+			"After a successful fix, rebase the new commits before your working copy with `jj rebase --source <first-change-id> --insert-before @` (only the first change id is needed — --source rebases it and all descendants) to pull the subagent's work into the main repo.",
 		],
 		description: [
-			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent (no extensions) that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
+			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'parents(@)'), optionally runs a worktree-init script, spawns a subagent that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
 			`Arguments: peb_id (e.g., ${pebbleIDPattern}), optional extra_prompt appended to the subagent instructions.`,
-			"Call fix_peb multiple times in one turn to launch several fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. Does not merge or push.",
+			"CANNOT be used on a peb that has open blockers: every peb in its `blocked-by` list must be fixed (or closed) first.",
+			`Concurrency: at most ${fixPebConfig.maxParallel} background fix_peb job(s) may run at once; if you need to launch more, wait for completion of previous jobs.`,
 		].join(" "),
 		parameters: Type.Object({
 			peb_id: Type.String({ description: `The peb ID to fix (e.g., ${pebbleIDPattern})` }),
@@ -789,11 +837,46 @@ export default async function (pi: ExtensionAPI) {
 			// repositories. Fail fast with an actionable error before doing anything.
 			await requireJjRepo(ctx.cwd);
 
+			// 1. Read the peb and reject it if it still has open blockers. Do this
+			//    before acquiring a slot or creating a worktree, so a rejected call
+			//    is cheap and doesn't hold the concurrency semaphore.
+			let peb: {
+				id: string;
+				title: string;
+				type?: string;
+				status?: string;
+				content?: string;
+				"blocked-by"?: unknown[];
+			};
+			try {
+				peb = pebJson(["read", pebId]);
+			} catch (e) {
+				throw new Error(`Could not read peb ${pebId}: ${(e as Error).message}`);
+			}
+			const blockers = ((peb["blocked-by"] as unknown[] | undefined) ?? []).filter(
+				(b): b is string => typeof b === "string" && b.trim() !== "",
+			);
+			const openBlockers = openBlockerIds(blockers);
+			if (openBlockers.length) {
+				throw new Error(
+					`${pebId} (${peb.title || ""}) is blocked by ${openBlockers.length} open peb(s): ` +
+						`${openBlockers.join(", ")}. ` +
+						`fix_peb cannot be used on a blocked peb; fix or close its blockers first, then retry.`,
+				);
+			}
+
 			const emit = (text: string) => {
 				onUpdate?.({ content: [{ type: "text", text }], details: undefined });
 			};
 
-			await fixPebSem.acquire();
+			if (!fixPebSem.tryAcquire()) {
+				throw new Error(
+					`fix_peb concurrency limit reached: at most ${fixPebConfig.maxParallel} background fix_peb job(s) ` +
+						`may run at once and all ${fixPebConfig.maxParallel} slot(s) are currently in use ` +
+						`(${fixPebSem.running} running). ` +
+						`Wait for a running job to complete — you will receive a notification when one finishes, then retry.`,
+				);
+			}
 			let tmpDir = "";
 			let workspaceName = "";
 			let worktreePath = "";
@@ -801,14 +884,6 @@ export default async function (pi: ExtensionAPI) {
 			let anchorId = "";
 			let spawned = false;
 			try {
-				// 1. Read the peb.
-				let peb: { id: string; title: string; type?: string; status?: string; content?: string };
-				try {
-					peb = pebJson(["read", pebId]);
-				} catch (e) {
-					throw new Error(`Could not read peb ${pebId}: ${(e as Error).message}`);
-				}
-
 				// Commit message: substitute {id}/{title} and sanitize to a single, shell-safe line.
 				const title = (peb.title || "").replace(/\s+/g, " ").trim();
 				const commitMsg = cfg.commitMessage
@@ -887,6 +962,10 @@ export default async function (pi: ExtensionAPI) {
 						if (r.model && !job.model) job.model = r.model;
 						if (r.stopReason) job.stopReason = r.stopReason;
 						if (r.errorMessage) job.errorMessage = job.errorMessage || r.errorMessage;
+						if (r.usage.cost) job.cost = r.usage.cost;
+						// Best-effort: snapshot the worktree after every turn so progress
+						// is durably recorded. Errors are ignored (it's best effort).
+						snapshotJj(worktreePath);
 					},
 				});
 				job.proc = proc;
@@ -901,6 +980,7 @@ export default async function (pi: ExtensionAPI) {
 						job.stopReason = sub.stopReason;
 						job.errorMessage = job.errorMessage || sub.errorMessage;
 						job.proc = undefined;
+						if (sub.usage.cost) job.cost = sub.usage.cost;
 
 						// Capture new commit change ids before forgetting the workspace.
 						if (anchorId) {
@@ -920,17 +1000,34 @@ export default async function (pi: ExtensionAPI) {
 
 						const failed = sub.code !== 0 || sub.stopReason === "error" || sub.stopReason === "aborted";
 						job.status = failed ? "failed" : "succeeded";
-
-						await teardownJob(job);
 					} finally {
 						fixPebSem.release();
 						if (!sessionShuttingDown) {
+							// Wait for the main agent to be idle before notifying.
+							// pi.sendMessage({ triggerTurn: true }) only starts a
+							// new turn when the agent is NOT streaming; if it fires
+							// mid-stream the message is downgraded to a queued
+							// followUp (triggerTurn silently ignored) and can be
+							// dropped. Polling ctx.isIdle() first makes the
+							// notification reliable. ctx.isIdle() throws if the ctx
+							// went stale (e.g. session switch); in that case fall
+							// back to notifying immediately. Bound the wait so a
+							// long-running stream still eventually delivers.
+							try {
+								const notifyDeadline = Date.now() + 5 * 60 * 1000;
+								while (!ctx.isIdle() && !sessionShuttingDown && Date.now() < notifyDeadline) {
+									await sleep(200);
+								}
+							} catch {
+								// ctx stale — best effort, fall through to notify now
+							}
 							try {
 								notifyFixComplete(job, sub);
 							} catch {
 								// ignore — notification is best-effort
 							}
 						}
+						await teardownJob(job);
 					}
 				});
 
@@ -984,22 +1081,28 @@ export default async function (pi: ExtensionAPI) {
 			"List background fix_peb jobs (running and finished) with their status, worktree, subagent summary, and resulting commit change ids. Does not block.",
 		parameters: Type.Object({}),
 		async execute() {
-			const jobs = Array.from(fixJobs.values()).map((j) => ({
-				pebId: j.pebId,
-				title: j.title,
-				type: j.type,
-				status: j.status,
-				workspace: j.workspace,
-				worktree: j.worktree,
-				baseRevset: j.baseRevset,
-				model: j.model,
-				startedAt: j.startedAt,
-				turns: j.turns,
-				summary: j.summary,
-				changeIds: j.changeIds,
-				stopReason: j.stopReason,
-				errorMessage: j.errorMessage,
-			}));
+			const jobs = Array.from(fixJobs.values()).map((j) => {
+				const entry: Record<string, unknown> = {
+					pebId: j.pebId,
+					title: j.title,
+					type: j.type,
+					status: j.status,
+					workspace: j.workspace,
+					worktree: j.worktree,
+					baseRevset: j.baseRevset,
+					model: j.model,
+					startedAt: j.startedAt,
+					turns: j.turns,
+					summary: j.summary,
+					changeIds: j.changeIds,
+					stopReason: j.stopReason,
+					errorMessage: j.errorMessage,
+				};
+				// Surface accumulated cost only when non-zero, so brand-new jobs
+				// (no API calls yet, or cost unavailable for the model) stay quiet.
+				if (j.cost) entry.costUsd = j.cost;
+				return entry;
+			});
 			return {
 				content: [
 					{
