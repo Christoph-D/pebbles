@@ -105,7 +105,8 @@ inside [jj repositories](https://docs.jj-vcs.dev/)**.
 
 When called, the tool:
 
-1. Reads the peb.
+1. Reads the peb. If the peb has any open blockers the call is rejected; every
+   blocker must be fixed (or closed) first.
 2. Creates a temporary jj worktree off a configurable base revset
    (`jj workspace add -r <base> "<tmpdir>/<id>"`).
 3. Optionally runs a worktree-initialization script (for example to install

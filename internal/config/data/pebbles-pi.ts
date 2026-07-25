@@ -64,6 +64,29 @@ function pebJson(args: string[], stdin?: string): any {
 	return Array.isArray(parsed) ? parsed[0] : parsed;
 }
 
+/**
+ * Return the ids of `blockers` that are still open (status `new` or
+ * `in-progress`), via a single `peb query 'id:(...)' 'status:open'` lookup.
+ * Returns [] when there are no open blockers (or the list is empty).
+ */
+function openBlockerIds(blockers: string[]): string[] {
+	const ids = blockers.filter((b) => typeof b === "string" && b.trim() !== "");
+	if (!ids.length) return [];
+	const res = runPeb(["query", `id:(${ids.join("|")})`, "status:open"]);
+	const open: string[] = [];
+	for (const line of (res.stdout || "").split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed) continue;
+		try {
+			const p = JSON.parse(trimmed);
+			if (p && typeof p.id === "string") open.push(p.id);
+		} catch {
+			// ignore non-JSON lines (e.g. trailing whitespace)
+		}
+	}
+	return open;
+}
+
 // ----------------------------------------------------------------------------
 // fix_peb: delegate fixing a single peb to an isolated subagent in a jj worktree
 // ----------------------------------------------------------------------------
@@ -766,12 +789,14 @@ export default async function (pi: ExtensionAPI) {
 		promptSnippet: "Delegate fixing one peb to a background subagent in a throwaway jj worktree",
 		promptGuidelines: [
 			"Use fix_peb to hand off fixing a single peb to an isolated BACKGROUND subagent that works in its own temporary jj worktree and commits with `jj commit`. fix_peb returns immediately (it does NOT block the turn); you will be notified via a message when the subagent finishes (success or failure), including the new commit change ids. Call fix_peb several times in one turn to launch fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. fix_peb does not merge or push anything.",
+			"fix_peb CANNOT be used on a blocked peb: every peb in the target's `blocked-by` list must be fixed (or closed) first. The tool validates this and rejects the call, listing the open blocker ids, if any blocker is still open (status `new` or `in-progress`). Fix the blockers with fix_peb first, then retry.",
 			"After a successful fix, the completion message tells you to rebase the new commits before your working copy with `jj rebase --source <first-change-id> --insert-before @` (only the first change id is needed — --source rebases it and all descendants). Run that to pull the subagent's work into the main repo.",
 		],
 		description: [
 			"Delegate fixing a single peb to an isolated BACKGROUND subagent. The tool reads the peb, creates a temporary jj worktree off the configured base revset (default 'main'), optionally runs a worktree-init script, spawns a subagent (no extensions) that fixes the peb and commits with `jj commit`, and returns IMMEDIATELY with a job id — it does NOT wait for the subagent. When the subagent finishes (success or failure) the main agent is notified via a message with the new commit change ids, then the worktree is forgotten and removed (commits stay reachable in jj).",
 			`Arguments: peb_id (e.g., ${pebbleIDPattern}), optional extra_prompt appended to the subagent instructions.`,
 			"Call fix_peb multiple times in one turn to launch several fixes in parallel. Use fix_peb_list to monitor jobs and fix_peb_kill to abort one. Does not merge or push.",
+			"fix_peb CANNOT be used on a peb that has open blockers: every peb in its `blocked-by` list must be fixed (or closed) first. The tool validates this and rejects the call (listing the open blocker ids) if any blocker is still open (status `new` or `in-progress`).",
 		].join(" "),
 		parameters: Type.Object({
 			peb_id: Type.String({ description: `The peb ID to fix (e.g., ${pebbleIDPattern})` }),
@@ -795,6 +820,34 @@ export default async function (pi: ExtensionAPI) {
 			// repositories. Fail fast with an actionable error before doing anything.
 			await requireJjRepo(ctx.cwd);
 
+			// 1. Read the peb and reject it if it still has open blockers. Do this
+			//    before acquiring a slot or creating a worktree, so a rejected call
+			//    is cheap and doesn't hold the concurrency semaphore.
+			let peb: {
+				id: string;
+				title: string;
+				type?: string;
+				status?: string;
+				content?: string;
+				"blocked-by"?: unknown[];
+			};
+			try {
+				peb = pebJson(["read", pebId]);
+			} catch (e) {
+				throw new Error(`Could not read peb ${pebId}: ${(e as Error).message}`);
+			}
+			const blockers = ((peb["blocked-by"] as unknown[] | undefined) ?? []).filter(
+				(b): b is string => typeof b === "string" && b.trim() !== "",
+			);
+			const openBlockers = openBlockerIds(blockers);
+			if (openBlockers.length) {
+				throw new Error(
+					`${pebId} (${peb.title || ""}) is blocked by ${openBlockers.length} open peb(s): ` +
+						`${openBlockers.join(", ")}. ` +
+						`fix_peb cannot be used on a blocked peb; fix or close its blockers first, then retry.`,
+				);
+			}
+
 			const emit = (text: string) => {
 				onUpdate?.({ content: [{ type: "text", text }], details: undefined });
 			};
@@ -814,14 +867,6 @@ export default async function (pi: ExtensionAPI) {
 			let anchorId = "";
 			let spawned = false;
 			try {
-				// 1. Read the peb.
-				let peb: { id: string; title: string; type?: string; status?: string; content?: string };
-				try {
-					peb = pebJson(["read", pebId]);
-				} catch (e) {
-					throw new Error(`Could not read peb ${pebId}: ${(e as Error).message}`);
-				}
-
 				// Commit message: substitute {id}/{title} and sanitize to a single, shell-safe line.
 				const title = (peb.title || "").replace(/\s+/g, " ").trim();
 				const commitMsg = cfg.commitMessage
