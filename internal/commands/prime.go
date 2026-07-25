@@ -14,9 +14,6 @@ import (
 //go:embed data/prompt.md
 var promptTemplate string
 
-//go:embed data/prompt-mcp.md
-var mcpPromptTemplate string
-
 func PrimeCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "prime",
@@ -37,12 +34,7 @@ func PrimeCommand() *cli.Command {
 				return fmt.Errorf("failed to update plugin: %w", err)
 			}
 
-			templateContent := promptTemplate
-			if c.Bool("mcp") {
-				templateContent = mcpPromptTemplate
-			}
-
-			tmpl, err := template.New("prompt").Parse(templateContent)
+			tmpl, err := template.New("prompt").Parse(promptTemplate)
 			if err != nil {
 				return err
 			}
@@ -52,11 +44,13 @@ func PrimeCommand() *cli.Command {
 				PebbleIDPattern  string
 				PebbleIDPattern2 string
 				PebbleIDPattern3 string
+				MCP              bool
 			}{
 				PebbleIDSuffix:   strings.Repeat("x", cfg.IDLength),
 				PebbleIDPattern:  cfg.Prefix + "-" + strings.Repeat("x", cfg.IDLength),
 				PebbleIDPattern2: cfg.Prefix + "-" + strings.Repeat("y", cfg.IDLength),
 				PebbleIDPattern3: cfg.Prefix + "-" + strings.Repeat("z", cfg.IDLength),
+				MCP:              c.Bool("mcp"),
 			}
 
 			return tmpl.Execute(os.Stdout, data)

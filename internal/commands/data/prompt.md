@@ -1,7 +1,6 @@
 # Using peb (Pebbles Task Tracker)
 
-You are working with "peb" (Pebbles), an agent-first Go CLI tool for tracking
-tasks, bugs, features, and epics.
+You are working with "peb" (Pebbles), an agent-first tool for tracking tasks, bugs, features, and epics.
 
 ## ⚠️ CRITICAL REQUIREMENT
 
@@ -37,10 +36,10 @@ Trivial work (simple, single-step tasks that can be completed in < 3 minutes) ca
 
 Terminology:
 
-- Pebs with status `new` or `in-progress` are "open". Query with `peb query status:open`.
-- Pebs with status `fixed` or `wont-fix` are "closed". Query with `peb query status:closed`.
+- Pebs with status `new` or `in-progress` are "open". Query with {{if .MCP}}`peb_query` using filters{{else}}`peb query status:open`{{end}}.
+- Pebs with status `fixed` or `wont-fix` are "closed". Query with {{if .MCP}}`peb_query` using filters{{else}}`peb query status:closed`{{end}}.
 
-## CLI Commands
+{{if not .MCP}}## CLI Commands
 
 ### Create a new peb
 
@@ -144,35 +143,56 @@ This command removes all closed pebs.
 
 Always confirm with the user before running this command.
 
-## Best Practices
+{{end}}## Best Practices
 
 **Before starting work:**
 
-1. Use `peb query status:open` to find work
-2. Use `peb read` to understand requirements
+1. Use {{if .MCP}}`peb_query` with `filters: ["status:open"]`{{else}}`peb query status:open`{{end}} to find work
+2. Use {{if .MCP}}`peb_read` with the peb ID(s){{else}}`peb read`{{end}} to understand requirements
 
 **While working:**
 
-1. Use `peb update` to mark pebs as `in-progress` when starting work
-2. Use `peb update` to update the peb's content if requirements change
-3. Use `peb update` to mark as `fixed` when completed
+1. Use {{if .MCP}}`peb_update`{{else}}`peb update`{{end}} to mark pebs as `in-progress` when starting work
+2. Use {{if .MCP}}`peb_update`{{else}}`peb update`{{end}} to update the peb's content if requirements change
+3. Use {{if .MCP}}`peb_update`{{else}}`peb update`{{end}} to mark as `fixed` when completed
 
 **Destructive operations:**
 
-- **DO NOT use `peb delete`** unless the user explicitly asks for it. This command permanently deletes pebs and their data cannot be recovered. Always confirm with the user before using this command.
+- **DO NOT use {{if .MCP}}`peb_delete`{{else}}`peb delete`{{end}}** unless the user explicitly asks for it. This command permanently deletes pebs and their data cannot be recovered. Always confirm with the user before using this command.
 
 **Tracking dependencies with blocked-by:**
 
 The `blocked-by` field establishes dependencies between pebs:
 - Setting {{.PebbleIDPattern}} as blocked-by {{.PebbleIDPattern2}} means {{.PebbleIDPattern2}} is a prerequisite or subtask of {{.PebbleIDPattern}}
 - {{.PebbleIDPattern}} cannot be marked as `fixed` until all pebs in its `blocked-by` list are also `fixed`
-- Use `peb read` to find a peb's dependencies (must be completed before this peb can be marked as fixed)
-  - Use `peb query` with `id:(<id>|...)` to get all the titles of the dependencies
-  - Use `peb read` to get their full details
+- Use {{if .MCP}}`peb_read`{{else}}`peb read`{{end}} to find a peb's dependencies (must be completed before this peb can be marked as fixed)
+  - Use {{if .MCP}}`peb_query` with `filters: ["id:(<id>|...)"]`{{else}}`peb query` with `id:(<id>|...)`{{end}} to get all the titles of the dependencies
+  - Use {{if .MCP}}`peb_read`{{else}}`peb read`{{end}} to get their full details
 
 ## Example: Bug Fix without Dependencies
 
-```bash
+{{if .MCP}}```
+# 1. Find a bug to work on
+Call peb_query with:
+- filters: ["status:open", "type:bug"]
+
+# 2. Read details
+Call peb_read with:
+- id: "{{.PebbleIDPattern}}"
+
+# 3. Mark as in-progress
+Call peb_update with:
+- id: "{{.PebbleIDPattern}}"
+- data: '{"status":"in-progress"}'
+
+# 4. Do the work...
+
+# 5. Mark as fixed
+Call peb_update with:
+- id: "{{.PebbleIDPattern}}"
+- data: '{"status":"fixed"}'
+```
+{{else}}```bash
 # 1. Find a bug to work on
 peb query status:open type:bug
 
@@ -187,17 +207,17 @@ peb update {{.PebbleIDPattern}} '{"status":"in-progress"}'
 # 5. Mark as fixed
 peb update {{.PebbleIDPattern}} '{"status":"fixed"}'
 ```
-
+{{end}}
 ## Example: Creating an Epic
 
 When tracking complex work that requires multiple tasks, create an epic:
 
 1. First, create all the subtask pebs:
-   - Call `peb new` for each subtask with type `task` or `feature`
+   - Call {{if .MCP}}`peb_new`{{else}}`peb new`{{end}} for each subtask with type `task` or `feature`
    - Leave `blocked-by` empty
 
 2. Create the epic peb that tracks the overall goal:
-   - Call `peb new` with type `epic`
+   - Call {{if .MCP}}`peb_new`{{else}}`peb new`{{end}} with type `epic`
    - Set `blocked-by` to list all the subtask peb IDs
 
 ## Writing Good Descriptions
