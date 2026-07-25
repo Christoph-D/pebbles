@@ -260,6 +260,10 @@ function snapshotJj(cwd: string): void {
 	}
 }
 
+/** Promise-based delay used by the fix_peb completion handler to wait for the
+ *  main agent to become idle before sending its notification. */
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 /** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
  *  the child handle and a promise that resolves when the process exits. The
  *  caller drives completion (capturing commits, tearing down, notifying). */
@@ -999,6 +1003,24 @@ export default async function (pi: ExtensionAPI) {
 					} finally {
 						fixPebSem.release();
 						if (!sessionShuttingDown) {
+							// Wait for the main agent to be idle before notifying.
+							// pi.sendMessage({ triggerTurn: true }) only starts a
+							// new turn when the agent is NOT streaming; if it fires
+							// mid-stream the message is downgraded to a queued
+							// followUp (triggerTurn silently ignored) and can be
+							// dropped. Polling ctx.isIdle() first makes the
+							// notification reliable. ctx.isIdle() throws if the ctx
+							// went stale (e.g. session switch); in that case fall
+							// back to notifying immediately. Bound the wait so a
+							// long-running stream still eventually delivers.
+							try {
+								const notifyDeadline = Date.now() + 5 * 60 * 1000;
+								while (!ctx.isIdle() && !sessionShuttingDown && Date.now() < notifyDeadline) {
+									await sleep(200);
+								}
+							} catch {
+								// ctx stale — best effort, fall through to notify now
+							}
 							try {
 								notifyFixComplete(job, sub);
 							} catch {
