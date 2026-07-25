@@ -251,6 +251,15 @@ function tryKill(proc: { kill: (signal?: NodeJS.Signals | number) => boolean }, 
 	}
 }
 
+/** Best-effort `jj util snapshot` in the given directory. */
+function snapshotJj(cwd: string): void {
+	try {
+		spawnSync("jj", ["util", "snapshot"], { cwd });
+	} catch {
+		// best-effort; ignore
+	}
+}
+
 /** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
  *  the child handle and a promise that resolves when the process exits. The
  *  caller drives completion (capturing commits, tearing down, notifying). */
@@ -950,6 +959,9 @@ export default async function (pi: ExtensionAPI) {
 						if (r.stopReason) job.stopReason = r.stopReason;
 						if (r.errorMessage) job.errorMessage = job.errorMessage || r.errorMessage;
 						if (r.usage.cost) job.cost = r.usage.cost;
+						// Best-effort: snapshot the worktree after every turn so progress
+						// is durably recorded. Errors are ignored (it's best effort).
+						snapshotJj(worktreePath);
 					},
 				});
 				job.proc = proc;
