@@ -2,25 +2,25 @@
 
 You are working with "peb" (Pebbles), an agent-first tool for tracking tasks, bugs, features, and epics.
 
-## ⚠️ CRITICAL REQUIREMENT
+## When to Use a Peb
 
-**ALL NON-TRIVIAL WORK MUST BE TRACKED AS A PEB**
+Pebs are useful for two main purposes:
 
-Before doing ANY non-trivial task, bug fix, feature, or code change:
-1. Create a peb to track it (for complex work, create multiple subtasks followed by an overall epic blocked by all the subtasks)
+1. **Tracking complex work** — work that requires multiple tasks or steps. Break it down into smaller task pebs and create an `epic` peb (blocked by all the task pebs) to track the overall goal.
+2. **Recording future work** — bugs, feature requests, and ideas you want to remember and address later, rather than fixing right now.
+
+**If something can be fixed immediately and doesn't require subtasks, no peb is needed — just do it.**
+
+When you do use a peb:
+1. Create it before starting the work
 2. Update its status as you work
-3. Mark it as fixed when complete
-
-Trivial work (simple, single-step tasks that can be completed in < 3 minutes) can be done without a peb.
+3. Mark it as `fixed` when complete
 
 **Rules:**
 
-1. Every non-trivial task, bug, feature, or code change must be tracked as a peb
-2. Create a peb before starting the work
-3. Update peb status throughout the lifecycle
-4. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
-5. Use `blocked-by` to establish clear dependencies between related work
-6. For complex work, break it down into smaller task pebs and create an `epic` peb blocked by all the task pebs (epic remains `in-progress` until all tasks are `fixed`)
+1. Do not mark pebs as `fixed` until all dependencies (`blocked-by`) are also `fixed`
+2. Use `blocked-by` to establish clear dependencies between related work
+3. For complex work, break it down into smaller task pebs and create an `epic` peb blocked by all the task pebs (epic remains `in-progress` until all tasks are `fixed`)
 
 ## Core Concepts
 
