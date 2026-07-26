@@ -1,4 +1,4 @@
-// Version 20260725T221430Z-2271226
+// Version 20260726T143436Z-f05f9a2
 //
 // IMPORTANT: **This file in .pi/extensions/ is auto-generated**
 //
@@ -264,6 +264,39 @@ function snapshotJj(cwd: string): void {
  *  main agent to become idle before sending its notification. */
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Best-effort structured logging for fix_peb, to debug silent notification
+ *  failures. Appends one JSON line per event to the file named by the
+ *  PEB_FIX_LOG env var, or <agentDir>/peb-fix.log by default. Set
+ *  PEB_FIX_LOG=/dev/null (or "") to disable. Never throws.
+ *
+ *  Why: the completion -> notify path swallows every error (a ctx.isIdle()
+ *  throw, a pi.sendMessage rejection, and a notifyFixComplete throw are all
+ *  caught and ignored) and pi has no built-in debug log, so a dropped
+ *  notification leaves no evidence. This records each decision point so the
+ *  next failure can be diagnosed. */
+function logFix(event: string, fields?: Record<string, unknown>): void {
+	let file: string;
+	const env = process.env.PEB_FIX_LOG;
+	if (env === undefined) {
+		try {
+			file = path.join(getAgentDir(), "peb-fix.log");
+		} catch {
+			return;
+		}
+	} else if (env === "" || env === "/dev/null") {
+		return;
+	} else {
+		file = env;
+	}
+	try {
+		const line = JSON.stringify({ ts: new Date().toISOString(), event, ...fields }) + "\n";
+		fs.appendFileSync(file, line);
+	} catch {
+		// best-effort; never throw
+	}
+}
+
+
 /** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
  *  the child handle and a promise that resolves when the process exits. The
  *  caller drives completion (capturing commits, tearing down, notifying). */
@@ -396,7 +429,13 @@ interface FixJob {
 /** Registry of background fix_peb jobs, keyed by peb id (one job per peb at a time). */
 const fixJobs = new Map<string, FixJob>();
 
-/** Set during session_shutdown so completion handlers skip notifications. */
+/** Latched true on session_shutdown so in-flight completion handlers skip
+ *  notifications. Reset to false on session_start: session_shutdown also
+ *  fires on benign session replacements (ctx.newSession()/switchSession()/
+ *  fork()), and this extension module persists across those (only /reload
+ *  re-runs setup()), so without the reset the flag would latch true forever
+ *  after the first new/fork/switch session and silently drop every later
+ *  background fix_peb notification. */
 let sessionShuttingDown = false;
 
 // ----------------------------------------------------------------------------
@@ -577,6 +616,17 @@ export default async function (pi: ExtensionAPI) {
 	// renderer the built-in default ignores the toggle and always shows the
 	// full body.
 	pi.registerMessageRenderer("fix-peb-complete", renderFixPebComplete);
+
+	// Debug probe: log every agent run so fix_peb's notification log can confirm
+	// whether a turn actually follows a notify_dispatched. pi.sendMessage returns
+	// synchronously and routes async rejections (e.g. agent.prompt() throwing
+	// "Agent is already processing a prompt") through pi's own .catch(emitError),
+	// so the extension's try/catch around pi.sendMessage cannot see them. An
+	// agent_start within ~1s of a notify_dispatched means the triggerTurn path
+	// fired; its absence means the async path rejected and was swallowed.
+	pi.on("agent_start", async () => {
+		logFix("agent_start");
+	});
 
 	pi.registerTool({
 		name: "peb_new",
@@ -765,6 +815,7 @@ export default async function (pi: ExtensionAPI) {
 			const reason = job.errorMessage || sub.stderr.trim() || sub.summary || `subagent exited with code ${sub.code}`;
 			lines.push("", `Reason: ${reason}`);
 		}
+		logFix("send_message", { pebId: job.pebId, status: job.status, changeIds: job.changeIds });
 		try {
 			pi.sendMessage(
 				{
@@ -775,12 +826,13 @@ export default async function (pi: ExtensionAPI) {
 				},
 				{ triggerTurn: true, deliverAs: "followUp" },
 			);
-		} catch {
-			// session may be gone; best-effort
+		} catch (e) {
+			logFix("send_message_threw", { pebId: job.pebId, error: String(e) });
 		}
 	};
 
-	/** Forget a job's workspace and remove its temp dir. Best-effort. */
+	/** Forget a job's workspace, remove its temp dir, and drop it from the
+	 *  registry so fix_peb_list no longer reports it. Best-effort. */
 	const teardownJob = async (job: FixJob) => {
 		if (job.workspace) {
 			try {
@@ -796,6 +848,7 @@ export default async function (pi: ExtensionAPI) {
 				// ignore
 			}
 		}
+		fixJobs.delete(job.pebId);
 	};
 
 	pi.registerTool({
@@ -881,7 +934,7 @@ export default async function (pi: ExtensionAPI) {
 			let workspaceName = "";
 			let worktreePath = "";
 			let workspaceCreated = false;
-			let anchorId = "";
+			let anchorIds: string[] = [];
 			let spawned = false;
 			try {
 				// Commit message: substitute {id}/{title} and sanitize to a single, shell-safe line.
@@ -909,9 +962,17 @@ export default async function (pi: ExtensionAPI) {
 				}
 				workspaceCreated = true;
 
-				// Anchor for reporting new commits: the base commit the worktree sits on.
-				const anchorRes = await jj(["log", "-r", "@-", "--no-graph", "-T", "change_id.short()"], { cwd: worktreePath });
-				anchorId = (anchorRes.stdout || "").trim().split(/\s+/)[0] || "";
+				// Anchor for reporting new commits: the base the worktree sits on. When the
+				// base is a merge (e.g. fix_peb launched while @ is a merge), parents(@)
+				// resolves to multiple commits, so capture ALL of them and subtract the whole
+				// set below. The template MUST end in "\n": jj emits no separator between
+				// results, so without it a multi-parent base concatenates into one invalid
+				// change id and the capture silently errors out.
+				const anchorRes = await jj(["log", "-r", "parents(@)", "--no-graph", "-T", "change_id.short() ++ \"\\n\""], { cwd: worktreePath });
+				anchorIds = (anchorRes.stdout || "")
+					.split(/\s+/)
+					.map((s) => s.trim())
+					.filter(Boolean);
 
 				// 3. Optional worktree init (runs in main repo cwd, $1 = worktree path).
 				if (cfg.worktreeInit) {
@@ -975,6 +1036,7 @@ export default async function (pi: ExtensionAPI) {
 				// 5. Background completion: capture commits, tear down, notify once.
 				void result.then(async (sub) => {
 					try {
+						logFix("complete_start", { pebId, code: sub.code, stopReason: sub.stopReason, turns: sub.turns, errorMessage: sub.errorMessage });
 						job.summary = sub.summary;
 						job.turns = sub.turns;
 						job.stopReason = sub.stopReason;
@@ -983,18 +1045,23 @@ export default async function (pi: ExtensionAPI) {
 						if (sub.usage.cost) job.cost = sub.usage.cost;
 
 						// Capture new commit change ids before forgetting the workspace.
-						if (anchorId) {
+						// Subtract every anchor parent so merge bases work (a single-anchor range
+						// would miss the merge commit itself). The "\n" separator is required so
+						// multiple new commits don't concatenate into one entry.
+						if (anchorIds.length) {
 							try {
+								const rootExpr = anchorIds.length === 1 ? anchorIds[0] : `(${anchorIds.join("|")})`;
 								const logRes = await jj(
-									["log", "-r", `${anchorId}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line()"],
+									["log", "-r", `${rootExpr}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line() ++ \"\\n\""],
 									{ cwd: worktreePath },
 								);
 								job.changeIds = (logRes.stdout || "")
 									.split("\n")
 									.map((l) => l.trim())
 									.filter(Boolean);
-							} catch {
-								// best-effort
+								logFix("captured", { pebId, anchorIds, changeIds: job.changeIds });
+							} catch (e) {
+								logFix("capture_failed", { pebId, anchorIds, error: String(e) });
 							}
 						}
 
@@ -1013,19 +1080,32 @@ export default async function (pi: ExtensionAPI) {
 							// went stale (e.g. session switch); in that case fall
 							// back to notifying immediately. Bound the wait so a
 							// long-running stream still eventually delivers.
+							let idleState: "idle" | "deadline" | "ctx_stale" = "idle";
+							const waitStart = Date.now();
 							try {
 								const notifyDeadline = Date.now() + 5 * 60 * 1000;
 								while (!ctx.isIdle() && !sessionShuttingDown && Date.now() < notifyDeadline) {
 									await sleep(200);
 								}
+								try {
+									idleState = ctx.isIdle() ? "idle" : "deadline";
+								} catch {
+									idleState = "ctx_stale";
+								}
 							} catch {
 								// ctx stale — best effort, fall through to notify now
+								idleState = "ctx_stale";
 							}
+							logFix("notify_idle", { pebId, idleState, waitedMs: Date.now() - waitStart });
 							try {
 								notifyFixComplete(job, sub);
-							} catch {
-								// ignore — notification is best-effort
+								fixJobs.delete(job.pebId);
+								logFix("notify_dispatched", { pebId, idleState });
+							} catch (e) {
+								logFix("notify_failed", { pebId, idleState, error: String(e) });
 							}
+						} else {
+							logFix("notify_skipped_shutdown", { pebId });
 						}
 						await teardownJob(job);
 					}
@@ -1149,6 +1229,17 @@ export default async function (pi: ExtensionAPI) {
 			};
 		},
 		renderResult: renderPebResult,
+	});
+
+	// session_shutdown also fires on benign session replacements
+	// (ctx.newSession(), ctx.switchSession(), ctx.fork()), not just /reload or
+	// real exit. This module persists across those replacements (only /reload
+	// re-runs setup()), so sessionShuttingDown would latch true forever after
+	// the first new/fork/switch session. session_start fires for every fresh
+	// session, so reset the latch here to keep background fix_peb notifications
+	// working after a session switch.
+	pi.on("session_start", () => {
+		sessionShuttingDown = false;
 	});
 
 	// Kill any still-running subagents and tear down their workspaces on exit.
