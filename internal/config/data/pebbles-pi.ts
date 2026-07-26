@@ -429,7 +429,13 @@ interface FixJob {
 /** Registry of background fix_peb jobs, keyed by peb id (one job per peb at a time). */
 const fixJobs = new Map<string, FixJob>();
 
-/** Set during session_shutdown so completion handlers skip notifications. */
+/** Latched true on session_shutdown so in-flight completion handlers skip
+ *  notifications. Reset to false on session_start: session_shutdown also
+ *  fires on benign session replacements (ctx.newSession()/switchSession()/
+ *  fork()), and this extension module persists across those (only /reload
+ *  re-runs setup()), so without the reset the flag would latch true forever
+ *  after the first new/fork/switch session and silently drop every later
+ *  background fix_peb notification. */
 let sessionShuttingDown = false;
 
 // ----------------------------------------------------------------------------
@@ -1220,6 +1226,17 @@ export default async function (pi: ExtensionAPI) {
 			};
 		},
 		renderResult: renderPebResult,
+	});
+
+	// session_shutdown also fires on benign session replacements
+	// (ctx.newSession(), ctx.switchSession(), ctx.fork()), not just /reload or
+	// real exit. This module persists across those replacements (only /reload
+	// re-runs setup()), so sessionShuttingDown would latch true forever after
+	// the first new/fork/switch session. session_start fires for every fresh
+	// session, so reset the latch here to keep background fix_peb notifications
+	// working after a session switch.
+	pi.on("session_start", () => {
+		sessionShuttingDown = false;
 	});
 
 	// Kill any still-running subagents and tear down their workspaces on exit.
