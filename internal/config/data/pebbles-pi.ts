@@ -831,7 +831,8 @@ export default async function (pi: ExtensionAPI) {
 		}
 	};
 
-	/** Forget a job's workspace and remove its temp dir. Best-effort. */
+	/** Forget a job's workspace, remove its temp dir, and drop it from the
+	 *  registry so fix_peb_list no longer reports it. Best-effort. */
 	const teardownJob = async (job: FixJob) => {
 		if (job.workspace) {
 			try {
@@ -847,6 +848,7 @@ export default async function (pi: ExtensionAPI) {
 				// ignore
 			}
 		}
+		fixJobs.delete(job.pebId);
 	};
 
 	pi.registerTool({
@@ -1097,6 +1099,7 @@ export default async function (pi: ExtensionAPI) {
 							logFix("notify_idle", { pebId, idleState, waitedMs: Date.now() - waitStart });
 							try {
 								notifyFixComplete(job, sub);
+								fixJobs.delete(job.pebId);
 								logFix("notify_dispatched", { pebId, idleState });
 							} catch (e) {
 								logFix("notify_failed", { pebId, idleState, error: String(e) });

@@ -2,9 +2,9 @@
 id: peb-br37
 title: Make fix_peb a background subagent (non-blocking)
 type: feature
-status: in-progress
+status: fixed
 created: "2026-07-24T21:24:22+02:00"
-changed: "2026-07-24T21:24:56+02:00"
+changed: "2026-07-26T16:34:00+02:00"
 ---
 ## Goal
 
