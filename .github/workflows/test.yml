@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TAR_OPTIONS: "--no-same-owner"
 
     steps:
     - name: Checkout code
