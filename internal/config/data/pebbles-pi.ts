@@ -264,6 +264,39 @@ function snapshotJj(cwd: string): void {
  *  main agent to become idle before sending its notification. */
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Best-effort structured logging for fix_peb, to debug silent notification
+ *  failures. Appends one JSON line per event to the file named by the
+ *  PEB_FIX_LOG env var, or <agentDir>/peb-fix.log by default. Set
+ *  PEB_FIX_LOG=/dev/null (or "") to disable. Never throws.
+ *
+ *  Why: the completion -> notify path swallows every error (a ctx.isIdle()
+ *  throw, a pi.sendMessage rejection, and a notifyFixComplete throw are all
+ *  caught and ignored) and pi has no built-in debug log, so a dropped
+ *  notification leaves no evidence. This records each decision point so the
+ *  next failure can be diagnosed. */
+function logFix(event: string, fields?: Record<string, unknown>): void {
+	let file: string;
+	const env = process.env.PEB_FIX_LOG;
+	if (env === undefined) {
+		try {
+			file = path.join(getAgentDir(), "peb-fix.log");
+		} catch {
+			return;
+		}
+	} else if (env === "" || env === "/dev/null") {
+		return;
+	} else {
+		file = env;
+	}
+	try {
+		const line = JSON.stringify({ ts: new Date().toISOString(), event, ...fields }) + "\n";
+		fs.appendFileSync(file, line);
+	} catch {
+		// best-effort; never throw
+	}
+}
+
+
 /** Spawn a subagent `pi` process in JSON print mode. Returns immediately with
  *  the child handle and a promise that resolves when the process exits. The
  *  caller drives completion (capturing commits, tearing down, notifying). */
@@ -578,6 +611,17 @@ export default async function (pi: ExtensionAPI) {
 	// full body.
 	pi.registerMessageRenderer("fix-peb-complete", renderFixPebComplete);
 
+	// Debug probe: log every agent run so fix_peb's notification log can confirm
+	// whether a turn actually follows a notify_dispatched. pi.sendMessage returns
+	// synchronously and routes async rejections (e.g. agent.prompt() throwing
+	// "Agent is already processing a prompt") through pi's own .catch(emitError),
+	// so the extension's try/catch around pi.sendMessage cannot see them. An
+	// agent_start within ~1s of a notify_dispatched means the triggerTurn path
+	// fired; its absence means the async path rejected and was swallowed.
+	pi.on("agent_start", async () => {
+		logFix("agent_start");
+	});
+
 	pi.registerTool({
 		name: "peb_new",
 		label: "Peb New",
@@ -765,6 +809,7 @@ export default async function (pi: ExtensionAPI) {
 			const reason = job.errorMessage || sub.stderr.trim() || sub.summary || `subagent exited with code ${sub.code}`;
 			lines.push("", `Reason: ${reason}`);
 		}
+		logFix("send_message", { pebId: job.pebId, status: job.status, changeIds: job.changeIds });
 		try {
 			pi.sendMessage(
 				{
@@ -775,8 +820,8 @@ export default async function (pi: ExtensionAPI) {
 				},
 				{ triggerTurn: true, deliverAs: "followUp" },
 			);
-		} catch {
-			// session may be gone; best-effort
+		} catch (e) {
+			logFix("send_message_threw", { pebId: job.pebId, error: String(e) });
 		}
 	};
 
@@ -983,6 +1028,7 @@ export default async function (pi: ExtensionAPI) {
 				// 5. Background completion: capture commits, tear down, notify once.
 				void result.then(async (sub) => {
 					try {
+						logFix("complete_start", { pebId, code: sub.code, stopReason: sub.stopReason, turns: sub.turns, errorMessage: sub.errorMessage });
 						job.summary = sub.summary;
 						job.turns = sub.turns;
 						job.stopReason = sub.stopReason;
@@ -1005,8 +1051,9 @@ export default async function (pi: ExtensionAPI) {
 									.split("\n")
 									.map((l) => l.trim())
 									.filter(Boolean);
-							} catch {
-								// best-effort
+								logFix("captured", { pebId, anchorIds, changeIds: job.changeIds });
+							} catch (e) {
+								logFix("capture_failed", { pebId, anchorIds, error: String(e) });
 							}
 						}
 
@@ -1025,19 +1072,31 @@ export default async function (pi: ExtensionAPI) {
 							// went stale (e.g. session switch); in that case fall
 							// back to notifying immediately. Bound the wait so a
 							// long-running stream still eventually delivers.
+							let idleState: "idle" | "deadline" | "ctx_stale" = "idle";
+							const waitStart = Date.now();
 							try {
 								const notifyDeadline = Date.now() + 5 * 60 * 1000;
 								while (!ctx.isIdle() && !sessionShuttingDown && Date.now() < notifyDeadline) {
 									await sleep(200);
 								}
+								try {
+									idleState = ctx.isIdle() ? "idle" : "deadline";
+								} catch {
+									idleState = "ctx_stale";
+								}
 							} catch {
 								// ctx stale — best effort, fall through to notify now
+								idleState = "ctx_stale";
 							}
+							logFix("notify_idle", { pebId, idleState, waitedMs: Date.now() - waitStart });
 							try {
 								notifyFixComplete(job, sub);
-							} catch {
-								// ignore — notification is best-effort
+								logFix("notify_dispatched", { pebId, idleState });
+							} catch (e) {
+								logFix("notify_failed", { pebId, idleState, error: String(e) });
 							}
+						} else {
+							logFix("notify_skipped_shutdown", { pebId });
 						}
 						await teardownJob(job);
 					}
