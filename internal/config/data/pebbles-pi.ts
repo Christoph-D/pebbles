@@ -881,7 +881,7 @@ export default async function (pi: ExtensionAPI) {
 			let workspaceName = "";
 			let worktreePath = "";
 			let workspaceCreated = false;
-			let anchorId = "";
+			let anchorIds: string[] = [];
 			let spawned = false;
 			try {
 				// Commit message: substitute {id}/{title} and sanitize to a single, shell-safe line.
@@ -909,9 +909,17 @@ export default async function (pi: ExtensionAPI) {
 				}
 				workspaceCreated = true;
 
-				// Anchor for reporting new commits: the base commit the worktree sits on.
-				const anchorRes = await jj(["log", "-r", "@-", "--no-graph", "-T", "change_id.short()"], { cwd: worktreePath });
-				anchorId = (anchorRes.stdout || "").trim().split(/\s+/)[0] || "";
+				// Anchor for reporting new commits: the base the worktree sits on. When the
+				// base is a merge (e.g. fix_peb launched while @ is a merge), parents(@)
+				// resolves to multiple commits, so capture ALL of them and subtract the whole
+				// set below. The template MUST end in "\n": jj emits no separator between
+				// results, so without it a multi-parent base concatenates into one invalid
+				// change id and the capture silently errors out.
+				const anchorRes = await jj(["log", "-r", "parents(@)", "--no-graph", "-T", "change_id.short() ++ \"\\n\""], { cwd: worktreePath });
+				anchorIds = (anchorRes.stdout || "")
+					.split(/\s+/)
+					.map((s) => s.trim())
+					.filter(Boolean);
 
 				// 3. Optional worktree init (runs in main repo cwd, $1 = worktree path).
 				if (cfg.worktreeInit) {
@@ -983,10 +991,14 @@ export default async function (pi: ExtensionAPI) {
 						if (sub.usage.cost) job.cost = sub.usage.cost;
 
 						// Capture new commit change ids before forgetting the workspace.
-						if (anchorId) {
+						// Subtract every anchor parent so merge bases work (a single-anchor range
+						// would miss the merge commit itself). The "\n" separator is required so
+						// multiple new commits don't concatenate into one entry.
+						if (anchorIds.length) {
 							try {
+								const rootExpr = anchorIds.length === 1 ? anchorIds[0] : `(${anchorIds.join("|")})`;
 								const logRes = await jj(
-									["log", "-r", `${anchorId}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line()"],
+									["log", "-r", `${rootExpr}..@-`, "--no-graph", "-T", "change_id.short() ++ ' ' ++ description.first_line() ++ \"\\n\""],
 									{ cwd: worktreePath },
 								);
 								job.changeIds = (logRes.stdout || "")
